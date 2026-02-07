@@ -1,0 +1,1756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Sir Jester's Quest - Final Polish</title>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+    body { 
+        margin: 0; padding: 0; overflow: hidden; 
+        background: #fff; 
+        font-family: 'Press Start 2P', cursive;
+        touch-action: none; user-select: none; -webkit-user-select: none; 
+    }
+    
+    canvas { display: block; width: 100%; height: 100%; }
+
+    /* UI LAYERS */
+    #ui-layer {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        pointer-events: none;
+        display: flex; flex-direction: column; justify-content: space-between;
+    }
+
+    /* STORY BOX */
+    #story-container {
+        position: absolute; bottom: 2%; left: 2%; width: 96%;
+        background: #fff; border: 0.5vmin solid #000;
+        padding: 2vmin; box-sizing: border-box;
+        text-align: center; pointer-events: auto;
+        box-shadow: 1vmin 1vmin 0px rgba(0,0,0,0.2);
+        z-index: 20;
+        transition: opacity 0.3s;
+    }
+
+    #story-text {
+        font-size: 2.5vmin; line-height: 1.6; color: #000; margin-bottom: 2vmin;
+        min-height: 5vmin; display: flex; align-items: center; justify-content: center;
+    }
+
+    /* BUTTONS */
+    .btn {
+        background: #000; color: #fff; border: 0.4vmin solid #000; 
+        padding: 1.5vmin 4vmin; font-family: inherit; font-size: 2.5vmin;
+        cursor: pointer; box-shadow: 0.5vmin 0.5vmin 0 #888;
+        display: inline-block;
+    }
+    .btn:active { transform: translate(0.3vmin, 0.3vmin); box-shadow: 0.2vmin 0.2vmin 0 #888; }
+
+    /* HUD OVERLAY */
+    #game-hud {
+        position: absolute; top: 2vmin; right: 2vmin;
+        display: none; 
+        flex-direction: column; 
+        align-items: flex-end; 
+        gap: 1vmin;
+        pointer-events: none;
+    }
+
+    /* TIMER */
+    #timer {
+        font-size: 3.75vmin; 
+        color: #000; 
+        text-shadow: 0.2vmin 0.2vmin 0 #fff;
+        margin-bottom: 0.5vmin;
+        text-align: right;
+        font-weight: bold;
+        transition: color 0.3s;
+    }
+
+    @keyframes panicPulse {
+        0% { transform: scale(1) rotate(0deg); }
+        25% { transform: scale(1.2) rotate(-5deg); }
+        50% { transform: scale(1.2) rotate(5deg); }
+        75% { transform: scale(1.1) rotate(-2deg); }
+        100% { transform: scale(1) rotate(0deg); }
+    }
+
+    #timer.panic {
+        color: #f00 !important;
+        text-shadow: 0.3vmin 0.3vmin 0 #500;
+        animation: panicPulse 0.5s infinite;
+    }
+
+    .hud-row {
+        display: flex; align-items: center; gap: 0.8vmin;
+        background: rgba(255,255,255,0.9);
+        padding: 0.8vmin; border: 0.4vmin solid #000;
+        position: relative;
+        width: 42vmin; 
+        box-sizing: border-box;
+    }
+    
+    .color-icon { 
+        width: 4.5vmin; height: 4.5vmin; 
+        border: 0.4vmin solid #000; flex-shrink: 0; 
+    }
+    
+    /* PROGRESS BARS */
+    .bar-container {
+        flex-grow: 1; 
+        height: 4.5vmin; 
+        background: #ccc; border: 0.4vmin solid #000;
+        position: relative;
+    }
+    .bar-fill {
+        height: 100%; width: 0%; 
+        transition: width 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28); 
+    }
+    .hud-txt { 
+        position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        font-size: 2.25vmin; 
+        color: #000; text-shadow: 0.2vmin 0.2vmin 0 #fff; z-index: 2;
+    }
+
+    /* SPILL MESSAGE */
+    .spill-msg {
+        position: absolute; top: 50%; right: 105%; transform: translateY(-50%);
+        font-size: 2.5vmin; color: #d00; white-space: nowrap; 
+        font-weight: bold; opacity: 0; pointer-events: none;
+        text-shadow: 0.2vmin 0.2vmin 0 #fff;
+        background: rgba(255,255,255,0.9);
+        padding: 0.5vmin; border: 0.2vmin solid #000;
+        z-index: 10;
+    }
+    
+    .spill-msg.blocked {
+        color: #00d000;
+        border-color: #00d000;
+    }
+
+    .spill-anim {
+        animation: popOut 1s ease-out forwards;
+    }
+
+    @keyframes popOut {
+        0% { opacity: 1; transform: translateY(-50%) translateX(0) scale(1); }
+        100% { opacity: 0; transform: translateY(-50%) translateX(-2vmin) scale(1.2); }
+    }
+
+    /* MAX VIBRATION */
+    @keyframes vibrate {
+        0% { transform: translate(0); }
+        20% { transform: translate(-0.3vmin, 0.3vmin); }
+        40% { transform: translate(-0.3vmin, -0.3vmin); }
+        60% { transform: translate(0.3vmin, 0.3vmin); }
+        80% { transform: translate(0.3vmin, -0.3vmin); }
+        100% { transform: translate(0); }
+    }
+    .hud-row.max {
+        border-color: #d00;
+        animation: vibrate 0.3s linear infinite;
+        background: #fff0f0;
+    }
+    .hud-row.max .hud-txt { color: #d00; font-weight: bold; }
+
+    /* END SCREEN BARS */
+    #end-bars {
+        display: none; width: 100%; 
+        max-width: 100%;
+        margin: 1vmin auto;
+        background: #eee; padding: 1.5vmin; border: 0.4vmin solid #000;
+        box-sizing: border-box;
+        overflow: hidden; 
+    }
+    .end-row {
+        display: flex; align-items: center; justify-content: center; 
+        gap: 1vmin;
+        margin-bottom: 1vmin; font-size: 2vmin; width: 100%;
+        box-sizing: border-box;
+    }
+    .end-label { width: 5vmin; text-align: center; font-weight: bold; flex-shrink: 0; }
+    .progress-track {
+        width: 35vmin; 
+        flex-grow: 0;
+        height: 3vmin; background: #ccc; border: 0.3vmin solid #000;
+        position: relative;
+    }
+
+</style>
+</head>
+<body oncontextmenu="return false;">
+
+<div id="ui-layer">
+    <div id="game-hud">
+        <div id="timer">1:30</div>
+
+        <div class="hud-row" id="row-R">
+            <div class="spill-msg" id="msg-R"></div>
+            <div class="color-icon" style="background:#f00"></div>
+            <div class="bar-container"><div id="bar-R" class="bar-fill" style="background:#f00"></div><span id="cnt-R" class="hud-txt">0/3</span></div>
+        </div>
+        <div class="hud-row" id="row-Y">
+            <div class="spill-msg" id="msg-Y"></div>
+            <div class="color-icon" style="background:#ff0"></div>
+            <div class="bar-container"><div id="bar-Y" class="bar-fill" style="background:#ff0"></div><span id="cnt-Y" class="hud-txt">0/2</span></div>
+        </div>
+        <div class="hud-row" id="row-B">
+            <div class="spill-msg" id="msg-B"></div>
+            <div class="color-icon" style="background:#00f"></div>
+            <div class="bar-container"><div id="bar-B" class="bar-fill" style="background:#00f"></div><span id="cnt-B" class="hud-txt">0/4</span></div>
+        </div>
+        <div class="hud-row" id="row-G">
+            <div class="spill-msg" id="msg-G"></div>
+            <div class="color-icon" style="background:#4dff4d"></div>
+            <div class="bar-container"><div id="bar-G" class="bar-fill" style="background:#4dff4d"></div><span id="cnt-G" class="hud-txt">0/1</span></div>
+        </div>
+    </div>
+
+    <div id="story-container">
+        <div id="story-text">Loading...</div>
+        <div id="end-bars"></div>
+        <button id="main-btn" class="btn" onclick="handleBtn()">NEXT ></button>
+    </div>
+</div>
+
+<canvas id="c"></canvas>
+
+<script>
+// --- CONFIG ---
+const MAX_TIME = 90; 
+const COLORS = { R:'#f00', Y:'#ff0', B:'#00f', G:'#4dff4d' };
+const LIGHT_COLORS = { R:'#f88', Y:'#ffb', B:'#66f', G:'#99ff99' }; 
+
+let TARGETS = { R:0, Y:0, B:0, G:0 }; 
+let REGION_MAP = {}; 
+
+// --- MUSIC CONFIG ---
+const F = {
+    'A3': 220.00, 'B3': 246.94, 'C4': 261.63, 'D4': 293.66, 'E4': 329.63, 'F4': 349.23, 'G#4': 415.30,
+    'A4': 440.00, 'B4': 493.88, 'C5': 523.25, 'C#5': 554.37, 'D5': 587.33, 'E5': 659.25, 'F5': 698.46, 'G#5': 830.61, 'A5': 880.00
+};
+
+const SONG_DATA = [
+    ['E5', 'A3', 2, true], ['C5', 'E4', 2, false], ['A4', 'A3', 2, true], ['C5', 'E4', 2, false],
+    ['B4', 'B3', 2, true], ['G#4', 'E4', 2, false], ['E4', 'B3', 2, true], ['G#4', 'E4', 2, false],
+    ['A4', 'A3', 2, true], ['B4', 'E4', 2, false], ['C5', 'A3', 2, true], ['D5', 'E4', 2, false],
+    ['E5', 'C#5', 4, true], ['C#5', 'A4', 4, true],
+    ['D5', 'D4', 2, true], ['F5', 'F4', 2, false], ['A5', 'D4', 2, true], ['F5', 'A4', 2, false],
+    ['E5', 'A3', 2, true], ['C5', 'E4', 2, false], ['E5', 'A3', 2, true], ['C5', 'E4', 2, false],
+    ['D5', 'B3', 2, true], ['F5', 'D4', 2, false], ['B4', 'E4', 2, true], ['D5', 'G#4', 2, false],
+    ['C5', 'A3', 2, true], ['B4', 'E4', 2, false], ['A4', 'A3', 4, true]
+];
+
+// Audio State
+let audioCtx = null;
+let isPlayingGameplayMusic = false; // Flag for main game loop music
+let currentNoteIndex = 0;
+let nextNoteTime = 0;
+let currentTempo = 100;
+const START_TEMPO = 100;
+const TARGET_TEMPO = 240;
+
+// --- ASSETS & DECODING ---
+
+// Raw Encoded Strings
+const STRINGS = {
+    CONCERNED: "32:;32:;32:;32:;32:;32:;32:;32:;32:;32:;32:;32:;11:QAB;10:QAAE;9:QEBAQ;9:RQAUQ;9:QQAQQ;9:QQAQQU;10:QBQEEE;4:VEQAARUE;4:RRFVVUFQ;4:QQAAAAU;5:UUAABU;10:QAB;11:QAE;12:QEQ;11:UBU;11:VVU;12:VF;13:UU;12:VE;16:U;",
+    DECAP: "32:;32:;32:;32:;32:;32:;32:;32:;32:;32:;32:;32:;11:QAB;10:QAAE;9:QRBEQ;9:QEAQQ;9:QRBEQ;9:QAAAQ;10:QFQE;11:QAF;12:VV;32:;11:VVQ;10:UABQ;10:QABE;10:QABE;10:RAVE;10:RVVE;9:VVFF;9:RVFR;10:VUQQ;12:VF;",
+    HAPPY: "32:;32:;32:;32:;32:;32:;32:;32:;32:;32:;32:;32:;11:QAB;10:QAAE;9:QUAUQ;9:RBBBQ;9:QAAAQ;9:QEBAQU;10:QFQEEE;4:VEQAARUE;4:RRFVVUFQ;4:QQAAAAU;5:UUAABU;10:QAB;11:QAE;12:QEQ;11:UBU;11:VVU;12:VF;13:UU;12:VE;16:U;",
+    PANGRY: "11:VXVQ;8:VVf1VQ;8:VX1fVV;6:VX1VX1U;5:VVVQVVVQ;5:VVVAFVVV;4:VVVAAVVVQ;3:VVVAAAVVU;3:VVUAAABVU;2:VVUQAAEFVQ;2:VVQFABQFVQ;2:VVQBQFAFVQ;2:VVQBABAFVQ;2:VVQBABAFVQ;2:VVQAAAAFVQ;2:VVQAAAAVVQ;2:VVUAVUBVVQ;2:VVVAAAFVV;2:VVVVABVVV;2:VVlAAAGlV;3:VWpQAFqVQ;3:Vap1VdqVQ;4:Vqn//ZVU;6:WlX/aQE;7:Van2qQE;6:QaqWqlU;5:QWqqqqQ;6:Vqqqqp;8:aqqqqk;7:aqqqqp;6:aqqqqqk;6:VVVVVVU;",
+    PCONCERNED: "11:VXVQ;8:VVf1VQ;8:VX1fVV;6:VX1VX1U;5:VVVQVVVQ;5:VVVAFVVV;4:VVVAAVVVQ;3:VVVAAAVVU;3:VVUAAABVU;2:VVUBABAFVQ;2:VVQFABQFVQ;2:VVQVABUFVQ;2:VVQVABUFVQ;2:VVQFABQFVQ;2:VVQAAAAFVQ;2:VVQAAAAVVQ;2:VVUAFQBVVQ;2:VVVAAAFVV;2:VVVVABVVV;2:VVlAAAGlV;3:VWpQAFqVQ;3:Vap1VdqVQ;4:Vqn//ZVU;6:WlX/aQE;7:Van2qQE;6:QaqWqlU;5:QWqqqqQ;6:Vqqqqp;8:aqqqqk;7:aqqqqp;6:aqqqqqk;6:VVVVVVU;",
+    PHAPPY: "11:VXVQ;8:VVf1VQ;8:VX1fVV;6:VX1VX1U;5:VVVQVVVQ;5:VVVAFVVV;4:VVVAAVVVQ;3:VVVAAAVVU;3:VVUAAABVU;2:VVUAAAAFVQ;2:VVQFABQFVQ;2:VVQQQEEFVQ;2:VVQAAAAFVQ;2:VVQAAAAFVQ;2:VVQAAAAFVQ;2:VVQAQQAVVQ;2:VVUAFABVVQ;2:VVVAAAFVV;2:VVVVABVVV;2:VVlAAAGlV;3:VWpQAFqVQ;3:Vap1VdqVQ;4:Vqn//ZVU;6:WlX/aQE;7:Van2qQE;6:QaqWqlU;5:QWqqqqQ;6:Vqqqqp;8:aqqqqk;7:aqqqqp;6:aqqqqqk;6:VVVVVVU;",
+    PSAD: "11:VXVQ;8:VVf1VQ;8:VX1fVV;6:VX1VX1U;5:VVVQVVVQ;5:VVVAFVVV;4:VVVAAVVVQ;3:VVVAAAVVU;3:VVUAAABVU;2:VVUBABAFVQ;2:VVQVABUFVQ;2:VVQVABUFVQ;2:VVQFABQFVQ;2:VVQgAAIFVQ;2:VVQgAAIFVQ;2:VVQAFACVVQ;2:VVUAQQBVVQ;2:VVVAAAFVV;2:VVVVABVVV;2:VVlAAAGlV;3:VWpQAFqVQ;3:Vap1VdqVQ;4:Vqn//ZVU;6:WlX/aQE;7:Van2qQE;6:QaqWqlU;5:QWqqqqQ;6:Vqqqqp;8:aqqqqk;7:aqqqqp;6:aqqqqqk;6:VVVVVVU;",
+    SAD: "32:;32:;32:;32:;32:;32:;32:;32:;32:;32:;32:;32:;11:QAB;10:QAAE;9:QUBQQ;9:QQBAQ;9:QYBQQ;9:QIAIQU;10:QFUkEE;4:VEQQERUE;4:RRFVVUFQ;4:QQAAAAU;5:UUAABU;10:QAB;11:QAE;12:QEQ;11:UBU;11:VVU;12:VF;13:UU;12:VE;16:U;"
+};
+
+const B64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+const B64_MAP = {};
+for(let i=0; i<B64_CHARS.length; i++) B64_MAP[B64_CHARS[i]] = i;
+
+function decodeSprite(encodedStr) {
+    const rows = encodedStr.split(';');
+    const map = [];
+    
+    for(let r=0; r<rows.length; r++) {
+        if(!rows[r]) continue;
+        const parts = rows[r].split(':');
+        if(parts.length < 2) continue;
+        
+        let l_count = parseInt(parts[0]) || 0;
+        const b64Data = parts[1];
+        
+        const pixels = [];
+        for(let k=0; k<l_count; k++) pixels.push(0); // 0 = Transparent
+        
+        for(let k=0; k<b64Data.length; k++) {
+            const char = b64Data[k];
+            if(B64_MAP[char] !== undefined) {
+                const val = B64_MAP[char];
+                pixels.push((val >> 4) & 0x03);
+                pixels.push((val >> 2) & 0x03);
+                pixels.push(val & 0x03);
+            }
+        }
+        
+        // Pad to 32
+        while(pixels.length < 32) pixels.push(0);
+        
+        // 0=Trans, 1=Black, 2=Blue, 3=Yellow
+        map.push(pixels.slice(0, 32));
+    }
+    // Pad rows to 32
+    while(map.length < 32) {
+        map.push(new Array(32).fill(0));
+    }
+    return map;
+}
+
+// Helper to generate the Sprite Map
+let SPRITES = {}; 
+
+const JESTER_HAT_MAP = [
+".......####.......#####.........",
+"......#AAAA##...##BBBCC#........",
+".....#AAADDDD#.#EEBBBBCC#.......",
+"....##FFFFDDD##EEE#BBCC#G#......",
+"....#FFFFFFDDH#E##IIIIJ##K##....",
+".###FFF###HHHHH#IIIIIJJJ###L#...",
+".#MM###.###HHH#NNNI####JJJ###...",
+".#MM#..#OO#HHH#NNN#PPPP##Q#RR#..",
+"..##..#OOOO##H#NN#SSS#PPP##R#...",
+".....#TTTOOOOOUU#SSS##VVVV###...",
+"...###TTT##OOUUUUSS#..##VV#WW#..",
+"..#XX####..##UUUUU#.....###WW#..",
+"..#XX#......#######.......####..",
+"...###..........................",
+"................................",
+"................................",
+"................................",
+"................................",
+"................................",
+"................................",
+"................................",
+"................................",
+"................................",
+"................................",
+"................................",
+"................................",
+"................................",
+"................................",
+"................................",
+"................................",
+"................................",
+"................................"
+];
+
+// VARIANT 1: Diamond
+const GEM_SPRITE_1 = [
+    "...#...",
+    "..#A#..",
+    ".#AMA#.",
+    "#MAMAM#",
+    ".#MMM#.",
+    "..#M#..",
+    "...#..."
+];
+
+// VARIANT 2: Emerald Cut
+const GEM_SPRITE_2 = [
+    ".#####.",
+    "#AMMMA#",
+    "#MAMAM#",
+    "#MMMMM#",
+    "#MAMAM#",
+    "#AMMMA#",
+    ".#####."
+];
+
+// VARIANT 3: Scalene Triangle
+const GEM_SPRITE_3 = [
+    "....#..",
+    "...#A#.",
+    "..#MA#.",
+    ".#MMA#.",
+    "#MMMA#.",
+    "#MMMM#.",
+    ".####.."
+];
+
+const GEM_VARIANTS = [GEM_SPRITE_1, GEM_SPRITE_2, GEM_SPRITE_3];
+
+const BOMB_SPRITE = [
+    ".....R.",
+    "....F..",
+    "..BBB..", 
+    ".BBBBB.", 
+    ".BWBWB.", 
+    ".BBBBB.", 
+    "..BBB.."
+];
+
+const EYE_SPRITE = [
+    ".......",
+    "..000..",
+    ".01110.",
+    "01RG110",
+    "01YB110",
+    ".01110.",
+    "..000.."
+];
+
+const CLOCK_SPRITE = [
+    "..###..",
+    ".#WWW#.",
+    "#WW|WW#",
+    "#W-oWW#",
+    "#WWWWW#",
+    ".#WWW#.",
+    "..###.."
+];
+
+const ADJACENCY = {
+    'A': ['D', 'F'],
+    'B': ['C', 'E', 'I'],
+    'C': ['B', 'J', 'I'],
+    'D': ['A', 'F', 'H'],
+    'E': ['B'],
+    'F': ['D', 'A'],
+    'G': [],
+    'H': ['D', 'O'],
+    'I': ['B', 'C', 'N', 'J'],
+    'J': ['C', 'I'],
+    'K': [],
+    'L': [],
+    'M': [],
+    'N': ['I', 'U'],
+    'O': ['H', 'T', 'U'],
+    'P': ['S', 'V'],
+    'Q': [],
+    'R': [],
+    'S': ['P', 'U'],
+    'T': ['O'],
+    'U': ['N', 'O', 'S'],
+    'V': ['P', 'W'],
+    'W': ['V'],
+    'X': []
+};
+
+const STORY = [
+    { txt: "Sir Jester loves his job!\nHe makes the princess laugh.", s1: 'HAPPY', s2: 'PRINCESS_HAPPY', anim: 'hop' },
+    { txt: "But recently there's been an issue...", s1: 'CONCERNED', s2: 'PRINCESS_CONCERNED', anim: 'shake' },
+    { txt: "The princess has been sad...", s1: 'PRINCESS_MAD', anim: 'hop' },
+    { txt: "And this makes Sir Jester sad too...", s1: 'SAD', anim: 'hop' },
+    { txt: "But Sir Jester has an idea!", s1: 'HAPPY', anim: 'jump' },
+    { txt: "To make a colorful hat\nand make her laugh again.", s1: 'HAT', anim: 'float' }
+];
+
+// --- ENGINE VARIABLES ---
+const cvs = document.getElementById('c');
+const ctx = cvs.getContext('2d');
+let pxScale = 1; 
+
+let gameState = 'STORY'; 
+let slideIdx = 0;
+let timeLeft = MAX_TIME;
+
+let player = { x: 0, y: 0, w: 0, h: 0, vx: 0, vy: 0, ground: false, jumpCooldown: 0, expression: 'CONCERNED', expressionTimer: 0 };
+let spillTimer = 0; 
+let spillColor = '#fff';
+let colorblindTimer = 0; 
+let slowTimer = 0; 
+let shineTimers = {}; 
+
+let activePointers = {}; 
+let input = { active: false };
+let items = [];
+let particles = [];
+let floatText = []; 
+let collected = { R:0, Y:0, B:0, G:0 };
+let winCondition = false;
+let recentGemXs = []; 
+
+// --- INITIALIZATION ---
+function init() {
+    window.addEventListener('resize', resize);
+    window.addEventListener('contextmenu', e => e.preventDefault());
+    
+    // Decode Sprites
+    SPRITES['HAPPY'] = decodeSprite(STRINGS.HAPPY);
+    SPRITES['SAD'] = decodeSprite(STRINGS.SAD);
+    SPRITES['CONCERNED'] = decodeSprite(STRINGS.CONCERNED);
+    SPRITES['DECAP'] = decodeSprite(STRINGS.DECAP);
+    
+    // Princess
+    SPRITES['PRINCESS_HAPPY'] = decodeSprite(STRINGS.PHAPPY);
+    SPRITES['PRINCESS_MAD'] = decodeSprite(STRINGS.PSAD);
+    SPRITES['PRINCESS_ANGRY'] = decodeSprite(STRINGS.PANGRY);
+    SPRITES['PRINCESS_CONCERNED'] = decodeSprite(STRINGS.PCONCERNED);
+    
+    // Hat (for story)
+    SPRITES['HAT'] = decodeSprite(STRINGS.HAPPY); 
+
+    generateColorMap(); 
+    resize();
+    updateStoryUI();
+    requestAnimationFrame(loop);
+}
+
+function generateColorMap() {
+    const regions = Object.keys(ADJACENCY);
+    const colorKeys = ['R', 'Y', 'B', 'G'];
+    const assignments = {};
+    regions.sort(() => Math.random() - 0.5);
+
+    for (let r of regions) {
+        let choices = [...colorKeys].sort(() => Math.random() - 0.5);
+        let validColor = null;
+        for (let c of choices) {
+            let conflict = false;
+            for (let neighbor of ADJACENCY[r]) {
+                if (assignments[neighbor] === c) { conflict = true; break; }
+            }
+            if (!conflict) { validColor = c; break; }
+        }
+        assignments[r] = validColor || choices[0];
+    }
+
+    REGION_MAP = {};
+    TARGETS = { R:0, Y:0, B:0, G:0 };
+    let colorCounts = { R:0, Y:0, B:0, G:0 };
+    const sortedRegions = Object.keys(ADJACENCY).sort();
+    
+    for (let r of sortedRegions) {
+        let c = assignments[r];
+        colorCounts[c]++;
+        REGION_MAP[r] = { c: c, i: colorCounts[c] };
+    }
+
+    TARGETS = colorCounts;
+}
+
+function resize() {
+    cvs.width = window.innerWidth;
+    cvs.height = window.innerHeight;
+    let targetH = cvs.height / 5;
+    pxScale = targetH / 32; 
+    
+    // New dimensions based on 32x32 sprites
+    player.w = 32 * pxScale;
+    player.h = 32 * pxScale;
+    
+    if(player.y > cvs.height) player.y = cvs.height - player.h - 10;
+}
+
+function loop() {
+    ctx.clearRect(0, 0, cvs.width, cvs.height);
+    if (gameState === 'STORY') drawStory(); 
+    else if (gameState === 'TUTORIAL') drawTutorial();
+    else if (gameState === 'GAME') { updatePhysics(); drawGame(); }
+    else if (gameState === 'END') drawEndScene();
+    requestAnimationFrame(loop);
+}
+
+// --- AUDIO SYSTEM (UPDATED) ---
+
+function initAudio() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+}
+
+// 1. HAPPY STROLL (Intro / Story / Tutorial)
+const Stroll = (() => {
+    let isPlaying = false;
+    let nextNoteTime = 0;
+    let timerID = null;
+    let currentStep = 0;
+    const melody = [349.23, 0, 440.00, 523.25, 587.33, 523.25, 440.00, 392.00];
+
+    function playNote(freq, time, duration, type, vol) {
+        if (freq === 0) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, time);
+        gain.gain.setValueAtTime(vol, time);
+        gain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(time);
+        osc.stop(time + duration);
+    }
+
+    function scheduler() {
+        while (nextNoteTime < audioCtx.currentTime + 0.1) {
+            const secondsPerBeat = 0.2;
+            playNote(melody[currentStep], nextNoteTime, 0.3, 'square', 0.04);
+            if (currentStep % 2 === 0) {
+                playNote(174.61, nextNoteTime, 0.4, 'triangle', 0.06); 
+            }
+            nextNoteTime += secondsPerBeat;
+            currentStep = (currentStep + 1) % melody.length;
+        }
+        timerID = requestAnimationFrame(scheduler);
+    }
+
+    return {
+        play: () => {
+            if(!audioCtx) initAudio();
+            if (isPlaying) return;
+            isPlaying = true;
+            nextNoteTime = audioCtx.currentTime;
+            currentStep = 0;
+            scheduler();
+        },
+        stop: () => {
+            isPlaying = false;
+            cancelAnimationFrame(timerID);
+        },
+        get isPlaying() { return isPlaying; }
+    };
+})();
+
+// 2. NONCHALANT (Losing Scene)
+const Theme = (() => {
+    function playTone(freq, type, startTime, duration, vol = 0.1) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, startTime);
+        gain.gain.setValueAtTime(vol, startTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration - 0.05);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(startTime);
+        osc.stop(startTime + duration);
+    }
+
+    function playSlide(startFreq, endFreq, type, startTime, duration, vol = 0.1) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(startFreq, startTime);
+        osc.frequency.linearRampToValueAtTime(endFreq, startTime + duration);
+        gain.gain.setValueAtTime(vol, startTime);
+        gain.gain.linearRampToValueAtTime(0.01, startTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(startTime);
+        osc.stop(startTime + duration);
+    }
+
+    return {
+        play: () => {
+            if(!audioCtx) initAudio();
+            const now = audioCtx.currentTime;
+            const beat = 0.35; 
+            const C4 = 261.63, E4 = 329.63, F4 = 349.23, G4 = 392.00, A4 = 440.00, C3 = 130.81, G3 = 196.00, D4 = 293.66;
+
+            playTone(C4, 'square', now + beat * 0, beat, 0.1);
+            playTone(E4, 'square', now + beat * 1, beat, 0.1);
+            playTone(G4, 'square', now + beat * 2, beat, 0.1);
+            playSlide(A4, F4, 'square', now + beat * 3, beat * 2, 0.1); 
+
+            playTone(D4, 'square', now + beat * 6, beat, 0.1);
+            playTone(F4, 'square', now + beat * 7, beat, 0.1);
+            playSlide(G4, E4, 'square', now + beat * 8, beat * 2, 0.1);
+
+            playTone(C4, 'square', now + beat * 11, beat/2, 0.1);
+            playTone(G3, 'square', now + beat * 11.5, beat/2, 0.1);
+            playTone(C4, 'square', now + beat * 12, beat, 0.1);
+
+            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].forEach(i => {
+                let note = (i % 2 === 0) ? C3 : G3;
+                if (i > 5 && i < 11) note = (i % 2 === 0) ? D4/2 : G3;
+                if (i === 12) note = C3;
+                playTone(note, 'triangle', now + beat * i, beat * 0.5, 0.2);
+            });
+        }
+    };
+})();
+
+// 3. VICTORY (Winning Scene)
+const Win = (() => {
+    function playNote(freq, start, duration, type = 'square', vol = 0.1) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, start);
+        gain.gain.setValueAtTime(vol, start);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(start);
+        osc.stop(start + duration);
+    }
+
+    return {
+        play: () => {
+            if(!audioCtx) initAudio();
+            const now = audioCtx.currentTime;
+            const tempo = 0.12; 
+
+            const melody = [
+                {f: 523.25, d: 1}, {f: 659.25, d: 1}, {f: 783.99, d: 1}, {f: 1046.50, d: 4},
+                {f: 880.00, d: 1}, {f: 987.77, d: 1}, {f: 1046.50, d: 6}
+            ];
+
+            melody.forEach((note, i) => {
+                playNote(note.f, now + (i * tempo), note.d * tempo, 'square', 0.1);
+                if(i > 3) playNote(note.f * 1.5, now + (i * tempo), 0.5, 'sine', 0.03);
+            });
+
+            const bass = [261.63, 329.63, 392.00, 523.25];
+            bass.forEach((f, i) => {
+                playNote(f, now + (i * tempo), 0.4, 'triangle', 0.15);
+            });
+        }
+    };
+})();
+
+// --- SFX HELPERS ---
+function playClick() {
+    if(!audioCtx) return;
+    const t = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(600, t);
+    osc.frequency.exponentialRampToValueAtTime(100, t + 0.05);
+    gain.gain.setValueAtTime(0.05, t); 
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(t); osc.stop(t + 0.05);
+}
+
+function playTone(freq, type, time, duration, vol) {
+    if(!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type; osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0, time);
+    gain.gain.linearRampToValueAtTime(vol, time + 0.01); 
+    gain.gain.exponentialRampToValueAtTime(0.001, time + duration - 0.01);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(time); osc.stop(time + duration);
+}
+
+function playNoise(time, vol) {
+    if(!audioCtx) return;
+    const bufferSize = audioCtx.sampleRate * 0.04;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'highpass'; filter.frequency.value = 2200;
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(vol, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.03);
+    noise.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+    noise.start(time);
+}
+
+function playGlassClank() {
+    if(!audioCtx) return;
+    const t = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.frequency.setValueAtTime(2000, t);
+    gain.gain.setValueAtTime(0.1, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(t); osc.stop(t + 0.1);
+    const osc2 = audioCtx.createOscillator();
+    const gain2 = audioCtx.createGain();
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(3500, t); 
+    gain2.gain.setValueAtTime(0.05, t);
+    gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+    osc2.connect(gain2); gain2.connect(audioCtx.destination);
+    osc2.start(t); osc2.stop(t + 0.1);
+}
+
+function playGlassBreak() {
+    if(!audioCtx) return;
+    const t = audioCtx.currentTime;
+    const bufferSize = audioCtx.sampleRate * 0.3; 
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'highpass'; filter.frequency.value = 1000; 
+    const noiseGain = audioCtx.createGain();
+    noiseGain.gain.setValueAtTime(0.3, t);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+    noise.connect(filter); filter.connect(noiseGain); noiseGain.connect(audioCtx.destination);
+    noise.start(t);
+    for(let i=0; i<3; i++) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.frequency.setValueAtTime(2000 + (Math.random()*3000), t);
+        gain.gain.setValueAtTime(0.1, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1 + (Math.random()*0.2));
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(t); osc.stop(t + 0.3);
+    }
+}
+
+function playExplosion() {
+    if(!audioCtx) return;
+    const t = audioCtx.currentTime;
+    const bufferSize = audioCtx.sampleRate * 0.5;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass'; filter.frequency.value = 500;
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.8, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+    noise.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+    noise.start(t);
+}
+
+function playWarpSound() {
+    if(!audioCtx) return;
+    const t = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(200, t);
+    osc.frequency.exponentialRampToValueAtTime(1000, t + 0.5);
+    gain.gain.setValueAtTime(0.1, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(t); osc.stop(t+0.5);
+}
+
+function playSlowSound() {
+    if(!audioCtx) return;
+    const t = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(500, t);
+    osc.frequency.exponentialRampToValueAtTime(50, t + 1.0);
+    gain.gain.setValueAtTime(0.2, t);
+    gain.gain.linearRampToValueAtTime(0, t + 1.0);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(t); osc.stop(t+1.0);
+}
+
+function playGong() {
+    if(!audioCtx) return;
+    const t = audioCtx.currentTime;
+    const freqs = [100, 150, 220, 310, 430];
+    freqs.forEach((f, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.frequency.value = f;
+        osc.type = 'triangle';
+        gain.gain.setValueAtTime(0.3 / (i+1), t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 3 + (i*0.5));
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(t); osc.stop(t + 5);
+    });
+}
+
+function updateMusicScheduler() {
+    if (!isPlayingGameplayMusic || !audioCtx) return;
+    let elapsed = MAX_TIME - timeLeft;
+    let progress = Math.min(elapsed / MAX_TIME, 1);
+    let intensity = Math.pow(progress, 3); 
+    let baseTempo = START_TEMPO + (TARGET_TEMPO - START_TEMPO) * intensity;
+    if (slowTimer > 0) baseTempo *= 0.6;
+    currentTempo = baseTempo;
+    while (nextNoteTime < audioCtx.currentTime + 0.1) {
+        scheduleNote(currentNoteIndex, nextNoteTime);
+        const sixteenthTime = (60 / currentTempo) / 4;
+        const dur = SONG_DATA[currentNoteIndex][2];
+        nextNoteTime += sixteenthTime * dur;
+        currentNoteIndex = (currentNoteIndex + 1) % SONG_DATA.length;
+    }
+}
+
+function scheduleNote(index, time) {
+    const [mNote, bNote, dur, beat] = SONG_DATA[index];
+    const sixteenth = (60 / currentTempo) / 4;
+    const seconds = sixteenth * dur;
+    playTone(F[mNote], 'sawtooth', time, seconds, 0.04);
+    playTone(F[bNote], 'triangle', time, seconds, 0.08);
+    if (beat) playNoise(time, 0.03);
+}
+
+// --- STORY ---
+function updateStoryUI() {
+    if(gameState !== 'STORY') return;
+    const container = document.getElementById('story-container');
+    container.style.display = 'block';
+    container.style.background = '#fff';
+    container.style.border = '0.5vmin solid #000';
+    container.style.boxShadow = '1vmin 1vmin 0px rgba(0,0,0,0.2)';
+    
+    const s = STORY[slideIdx];
+    document.getElementById('story-text').innerText = s.txt;
+    const btn = document.getElementById('main-btn');
+    btn.innerText = (slideIdx === STORY.length - 1) ? "NEXT >" : "NEXT >";
+    // Hide End Bars
+    document.getElementById('end-bars').style.display = 'none';
+}
+
+function updateTutorialUI() {
+    const container = document.getElementById('story-container');
+    // Hide the standard story box during tutorial so we can draw on canvas
+    container.style.display = 'none';
+}
+
+function handleBtn() {
+    initAudio();
+    playClick();
+    
+    // START STROLL if not playing
+    if (!Stroll.isPlaying) Stroll.play();
+
+    if (gameState === 'STORY') {
+        slideIdx++;
+        if (slideIdx >= STORY.length) {
+            gameState = 'TUTORIAL';
+            updateTutorialUI();
+        } else {
+            updateStoryUI();
+        }
+    } else if (gameState === 'TUTORIAL') {
+        startGame();
+    } else if (gameState === 'END') {
+        location.reload(); 
+    }
+}
+
+function drawStory() {
+    const s = STORY[slideIdx];
+    // SCALED UP: Standardized scale
+    const scale = pxScale * 1.5; 
+    
+    const cx = cvs.width / 2;
+    // POSITIONING: Higher up (35% down) to avoid text box overlap
+    const cy = (cvs.height * 0.35) - (16 * scale); 
+    
+    let yOff = 0; let t = Date.now();
+    if (s.anim === 'hop') yOff = Math.abs(Math.sin(t/300)) * -20;
+    if (s.anim === 'float') yOff = Math.sin(t/500) * 10;
+    if (s.anim === 'jump') yOff = Math.abs(Math.sin(t/150)) * -30;
+
+    const spacing = cvs.width * 0.15; 
+
+    if (s.s2) {
+        if (['HAPPY','SAD','CONCERNED','HAT'].includes(s.s1)) {
+             const base = (s.s1 === 'HAT') ? 'HAPPY' : s.s1;
+             drawJester(cx - spacing - (16*scale), cy + yOff, scale, base);
+        } else {
+             drawCustomSprite(s.s1, cx - spacing - (16*scale), cy + yOff, scale); 
+        }
+
+        if (['HAPPY','SAD','CONCERNED','HAT'].includes(s.s2)) {
+             const base = (s.s2 === 'HAT') ? 'HAPPY' : s.s2;
+             drawJester(cx + spacing - (16*scale), cy + yOff, scale, base);
+        } else {
+             drawCustomSprite(s.s2, cx + spacing - (16*scale), cy + yOff, scale);
+        }
+    } else {
+        if (['HAPPY','SAD','CONCERNED','HAT'].includes(s.s1)) {
+            // FIX: Show FULL HAT if 'HAT' is specified (End of Intro)
+            const base = (s.s1 === 'HAT') ? 'HAPPY' : s.s1;
+            const fullHat = (s.s1 === 'HAT');
+            drawJester(cx - (16*scale), cy + yOff, scale, base, fullHat);
+        } else {
+            drawCustomSprite(s.s1, cx - (16*scale), cy + yOff, scale);
+        }
+    }
+}
+
+function drawTutorial() {
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, cvs.width, cvs.height);
+
+    // DYNAMIC LAYOUT CALCULATION
+    const W = cvs.width;
+    const H = cvs.height;
+    
+    // Determine font size based on width. 
+    // We want "HOLD RIGHT TO MOVE" (approx 18 chars) to fill about 80% of screen.
+    let baseFontSize = (W * 0.8) / 18;
+    // Clamp min/max for sanity
+    baseFontSize = Math.max(10, Math.min(baseFontSize, H * 0.06));
+
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = '#000';
+
+    // Zones
+    const topZoneY = H * 0.20;
+    const midZoneY = H * 0.45;
+    const botZoneY = H * 0.70;
+
+    // 1. Controls (Top)
+    ctx.font = `bold ${baseFontSize}px "Press Start 2P"`;
+    ctx.fillText("HOLD RIGHT TO MOVE", W/2, topZoneY - baseFontSize);
+    ctx.fillText("HOLD LEFT TO MOVE", W/2, topZoneY + baseFontSize * 0.5);
+    ctx.fillText("SWIPE UP TO JUMP", W/2, topZoneY + baseFontSize * 2.0);
+
+    // 2. Warning (Middle)
+    // Slightly smaller font for longer text
+    const warnSize = baseFontSize * 0.7;
+    ctx.font = `bold ${warnSize}px "Press Start 2P"`;
+    ctx.fillStyle = '#d00';
+    wrapText(ctx, "GET GEMS FOR YOUR HAT! DON'T TAKE MORE THAN YOU CAN CARRY!", W/2, midZoneY, W * 0.9, warnSize * 1.5);
+
+    // 3. Legend (Bottom)
+    const legendSize = baseFontSize * 0.6;
+    const iconScale = legendSize / 4; // Scale sprite to match text size roughly
+    const rowH = legendSize * 4;
+    
+    const col1 = W * 0.25;
+    const col2 = W * 0.75;
+    
+    drawLegendItem(col1, botZoneY, GEM_VARIANTS[1], "COLLECT!", {'#':'#000', 'M':'#4dff4d', 'A':'#fff'}, 0, iconScale, legendSize);
+    drawLegendItem(col2, botZoneY, BOMB_SPRITE, "AVOID!", {'R': '#f00', 'F': '#fa0', 'B': '#000', 'W': '#fff'}, 0, iconScale, legendSize);
+    
+    drawLegendItem(col1, botZoneY + rowH, EYE_SPRITE, "BLINDNESS", {'0': '#000', '1': '#fff', 'R': '#f00', 'Y': '#ff0', 'B': '#00f', 'G': '#0f0'}, 0, iconScale, legendSize);
+    drawLegendItem(col2, botZoneY + rowH, CLOCK_SPRITE, "SLOW TIME", {'#': '#da2', 'W': '#fff', '|': '#000', '-': '#000', 'o': '#000'}, 0, iconScale, legendSize);
+
+    // 4. Button (Simulated Draw)
+    ctx.fillStyle = '#000';
+    ctx.font = `bold ${baseFontSize * 1.2}px "Press Start 2P"`;
+    
+    // Pulsing effect
+    const pulse = 1 + Math.sin(Date.now() / 200) * 0.1;
+    ctx.save();
+    ctx.translate(W/2, H * 0.92);
+    ctx.scale(pulse, pulse);
+    ctx.fillText("TAP TO START", 0, 0);
+    ctx.restore();
+}
+
+function drawLegendItem(cx, cy, sprite, text, colors, variant, scale, fontSize) {
+    // Draw Sprite (Centered above text)
+    const sSize = 7 * scale; // 7px sprite width * scale
+    // Draw sprite centered at cx
+    drawMap(sprite, cx - (sSize * 0.5), cy - fontSize * 2, scale, colors);
+    
+    // Draw Text
+    ctx.fillStyle = '#000';
+    ctx.font = `bold ${fontSize}px "Press Start 2P"`;
+    ctx.fillText(text, cx, cy + fontSize * 0.5);
+}
+
+function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+    var words = text.split(' ');
+    var line = '';
+    var lines = [];
+    
+    for(var n = 0; n < words.length; n++) {
+        var testLine = line + words[n] + ' ';
+        var metrics = ctx.measureText(testLine);
+        var testWidth = metrics.width;
+        if (testWidth > maxWidth && n > 0) {
+            lines.push(line);
+            line = words[n] + ' ';
+        } else {
+            line = testLine;
+        }
+    }
+    lines.push(line);
+    
+    // Center vertically based on number of lines
+    let startY = y - ((lines.length - 1) * lineHeight) / 2;
+    
+    for(let k=0; k<lines.length; k++) {
+        ctx.fillText(lines[k], x, startY + (k*lineHeight));
+    }
+}
+
+// --- GAME ---
+function startGame() {
+    // AUDIO: STOP STROLL (Intro Music)
+    Stroll.stop();
+    
+    // AUDIO: START GAMEPLAY MUSIC (Old Song)
+    isPlayingGameplayMusic = true;
+    nextNoteTime = audioCtx.currentTime;
+    currentNoteIndex = 0;
+
+    gameState = 'GAME';
+    document.getElementById('story-container').style.display = 'none';
+    document.getElementById('game-hud').style.display = 'flex';
+    document.getElementById('timer').classList.remove('panic');
+    player.x = cvs.width/2 - player.w/2;
+    player.y = cvs.height - player.h - 10;
+    player.vx = 0; player.vy = 0;
+    collected = { R:0, Y:0, B:0, G:0 };
+    colorblindTimer = 0;
+    slowTimer = 0;
+    recentGemXs = [];
+    // Reset player state
+    player.expression = 'CONCERNED';
+    player.expressionTimer = 0;
+    
+    updateHUD();
+}
+
+function updatePhysics() {
+    let timeScale = (slowTimer > 0) ? 0.4 : 1.0;
+
+    timeLeft -= 0.016 * timeScale;
+    let m = Math.floor(timeLeft/60);
+    let s = Math.floor(timeLeft%60);
+    const timerEl = document.getElementById('timer');
+    timerEl.innerText = `${m}:${s<10?'0'+s:s}`;
+    
+    if (timeLeft <= 30 && !timerEl.classList.contains('panic')) timerEl.classList.add('panic');
+    if(timeLeft <= 0) endGame(false);
+    
+    // UPDATE GAMEPLAY MUSIC
+    updateMusicScheduler();
+
+    if(colorblindTimer > 0) colorblindTimer--;
+    if(slowTimer > 0) slowTimer--;
+    if(player.jumpCooldown > 0) player.jumpCooldown--;
+    
+    // Expression Timer
+    if (player.expressionTimer > 0) {
+        player.expressionTimer--;
+        if (player.expressionTimer <= 0) player.expression = 'CONCERNED';
+    }
+
+    let moveDir = 0;
+    const center = cvs.width / 2; 
+    for (let id in activePointers) {
+        const p = activePointers[id];
+        if (p.x < center) moveDir = -1;
+        if (p.x > center) moveDir = 1;
+    }
+
+    const accel = pxScale * 0.2;
+    const maxSpd = pxScale * 1.5;
+    if (moveDir !== 0) player.vx += moveDir * accel;
+    else {
+        if (player.ground) player.vx *= 0.6; else player.vx *= 0.96; 
+    }
+    player.vx = Math.max(-maxSpd, Math.min(maxSpd, player.vx));
+    if (Math.abs(player.vx) < 0.1) player.vx = 0;
+
+    // INCREASED GRAVITY FOR SNAPPY JUMP
+    player.vy += pxScale * 0.23; 
+    player.x += player.vx;
+    player.y += player.vy;
+
+    const GROUND_Y = cvs.height - (pxScale * 4); 
+    const LANDING_Y = GROUND_Y - player.h;
+
+    if (player.y > LANDING_Y) { 
+        player.y = LANDING_Y; 
+        player.vy = 0; 
+        player.ground = true; 
+    }
+
+    if (player.x < 0) { player.x = 0; player.vx = 0; }
+    if (player.x > cvs.width - player.w) { player.x = cvs.width - player.w; player.vx = 0; }
+    
+    if (spillTimer > 0) spillTimer--;
+    
+    for (let k in shineTimers) {
+        if (shineTimers[k] > 0) shineTimers[k]--;
+    }
+
+    let difficulty = (MAX_TIME - timeLeft) / MAX_TIME; 
+    let spawnRate = (0.013 + (difficulty * 0.04)) * 1.25; 
+    
+    if (Math.random() < spawnRate * timeScale) spawnItem();
+
+    for (let i = items.length - 1; i >= 0; i--) {
+        let it = items[i];
+        it.y += (pxScale * it.speed) * timeScale; 
+
+        if (checkRectCollide(player, {x:it.x, y:it.y, w:it.w, h:it.h})) {
+            if (it.type === 'BOMB') {
+                triggerBombHit();
+                items.splice(i, 1); continue;
+            }
+            if (it.type === 'EYE') {
+                triggerColorblind();
+                items.splice(i, 1); continue;
+            }
+            if (it.type === 'CLOCK') {
+                triggerSlow();
+                items.splice(i, 1); continue;
+            }
+            if (collected[it.type] >= TARGETS[it.type]) {
+                playGlassBreak();
+                triggerSpill(it.type);
+            } else {
+                collected[it.type]++;
+                // HAPPY Expression on Collect
+                player.expression = 'HAPPY'; 
+                player.expressionTimer = 30;
+                
+                playGlassClank();
+                for(let r in REGION_MAP) {
+                    if (REGION_MAP[r].c === it.type && REGION_MAP[r].i === collected[it.type]) {
+                        shineTimers[r] = 30; 
+                    }
+                }
+                floatText.push({
+                    x: player.x + player.w/2, y: player.y,
+                    txt: "+1", color: it.color, life: 40
+                });
+                for(let p=0; p<5; p++) {
+                    particles.push({
+                        x: player.x + player.w/2, y: player.y + player.h/2,
+                        vx: (Math.random()-0.5)*pxScale, vy: -Math.random()*pxScale,
+                        color: '#fff', life: 20, size: pxScale*2, type: 'sparkle'
+                    });
+                }
+                updateHUD();
+                checkWin();
+            }
+            items.splice(i, 1);
+        } else if (it.y > cvs.height) {
+            items.splice(i, 1);
+        }
+    }
+
+    if(items.length === 0) {
+        spawnItem();
+    }
+
+    for(let i=particles.length-1; i>=0; i--) {
+        let p = particles[i];
+        p.x += p.vx; p.y += p.vy;
+        if (p.type !== 'sparkle') p.vy += pxScale * 0.05; 
+        p.life--;
+        if(p.life <= 0) particles.splice(i, 1);
+    }
+    
+    for(let i=floatText.length-1; i>=0; i--) {
+        let f = floatText[i];
+        f.y -= pxScale * 0.1;
+        f.life--;
+        if(f.life <= 0) floatText.splice(i, 1);
+    }
+}
+
+function triggerColorblind() {
+    playWarpSound();
+    colorblindTimer = 240; 
+    player.expression = 'SAD'; player.expressionTimer = 60;
+}
+
+function triggerSlow() {
+    playSlowSound();
+    slowTimer = 180; 
+    player.expression = 'HAPPY'; player.expressionTimer = 60;
+}
+
+function triggerBombHit() {
+    playExplosion();
+    spillTimer = 30;
+    spillColor = '#333'; 
+    player.expression = 'SAD'; player.expressionTimer = 60;
+    
+    let totalLost = 0;
+    const keys = ['R', 'Y', 'B', 'G'];
+    keys.forEach(k => {
+        if(collected[k] > 0) {
+            let loss = Math.floor(Math.random() * 3) + 1;
+            if(loss > collected[k]) loss = collected[k];
+            collected[k] -= loss;
+            totalLost += loss;
+            for(let i=0; i<loss*3; i++) {
+                 particles.push({
+                    x: player.x + player.w/2, y: player.y + player.h/2,
+                    vx: (Math.random() - 0.5) * (pxScale * 5), 
+                    vy: -(Math.random() * (pxScale * 5)),
+                    color: COLORS[k],
+                    life: 60,
+                    size: player.w / 5,
+                    type: 'debris'
+                });
+            }
+        }
+    });
+    if(totalLost > 0) {
+        floatText.push({
+            x: player.x + player.w/2, y: player.y - player.h,
+            txt: `-${totalLost} ITEMS!`, color: '#f00', life: 60
+        });
+    } else {
+        floatText.push({
+            x: player.x + player.w/2, y: player.y - player.h,
+            txt: `MISS!`, color: '#fff', life: 40
+        });
+    }
+    updateHUD();
+}
+
+function triggerSpill(type) {
+    let current = collected[type];
+    if (current <= 0) return; 
+    let loss = Math.floor(Math.random() * 3) + 1;
+    if (loss > current) loss = current;
+    collected[type] -= loss;
+    spillTimer = 20; 
+    spillColor = COLORS[type];
+    
+    player.expression = 'SAD'; player.expressionTimer = 60;
+
+    for(let i=0; i<loss*4; i++) {
+        particles.push({
+            x: player.x + player.w/2,
+            y: player.y + player.h/2,
+            vx: (Math.random() - 0.5) * (pxScale * 3), 
+            vy: -(Math.random() * (pxScale * 3)),
+            color: COLORS[type],
+            life: 60,
+            size: player.w / 5,
+            type: 'debris'
+        });
+    }
+    updateHUD();
+    showSpillText(type, loss, false);
+}
+
+function showSpillText(type, amount, blocked) {
+    const el = document.getElementById(`msg-${type}`);
+    if(blocked) {
+        el.innerText = "CANCELLED!";
+        el.classList.add('blocked');
+    } else {
+        el.innerText = `-${amount} SPILLED!`;
+        el.classList.remove('blocked');
+    }
+    el.classList.remove('spill-anim');
+    void el.offsetWidth; 
+    el.classList.add('spill-anim');
+}
+
+function spawnItem() {
+    const gSize = 25 * pxScale * 0.5; 
+    let rand = Math.random();
+    const speed = 0.8 * (0.8 + Math.random() * 0.4); 
+    
+    // Dynamic Spawn Logic
+    let progress = Math.max(0, (MAX_TIME - timeLeft) / MAX_TIME); // 0 -> 1
+    
+    // Base chances
+    let baseBomb = 0.08;
+    let baseEye = 0.04;
+    let baseClock = 0.03;
+    
+    // Modified chances
+    let pClock = baseClock + (0.15 * Math.pow(progress, 3)); // Increases to ~18%
+    let pBomb = baseBomb * (1 - progress * 0.3); // Decreases slightly
+    let pEye = baseEye * (1 - progress * 0.3);   // Decreases slightly
+    
+    let type = 'GEM';
+    let color = '#000';
+    let variant = 0; 
+    
+    if (rand < pBomb) {
+        type = 'BOMB';
+    } else if (rand < pBomb + pEye) {
+        type = 'EYE'; color = '#fff';
+    } else if (rand < pBomb + pEye + pClock) {
+        type = 'CLOCK'; color = '#fff';
+    } else {
+        const keys = ['R', 'Y', 'B', 'G'];
+        type = keys[Math.floor(Math.random() * keys.length)];
+        color = COLORS[type];
+        variant = Math.floor(Math.random() * 3); 
+    }
+    let x = 0;
+    if (type === 'GEM' || ['R','G','B','Y'].includes(type)) {
+        x = Math.random() * (cvs.width - gSize);
+        recentGemXs.push(x);
+        if(recentGemXs.length > 5) recentGemXs.shift();
+    } else {
+        if (recentGemXs.length > 0 && Math.random() < 0.7) {
+            const target = recentGemXs[Math.floor(Math.random() * recentGemXs.length)];
+            const spread = cvs.width * 0.25;
+            x = target + (Math.random() * spread - spread/2);
+            if (x < 0) x = 0;
+            if (x > cvs.width - gSize) x = cvs.width - gSize;
+        } else {
+            x = Math.random() * (cvs.width - gSize);
+        }
+    }
+    items.push({ x: x, y: -gSize, w: gSize, h: gSize, type: type, color: color, speed: speed, variant: variant });
+}
+
+function checkRectCollide(p, it) {
+    return (p.x < it.x + it.w && p.x + p.w > it.x &&
+            p.y < it.y + it.h && p.y + p.h > it.y);
+}
+
+function updateHUD() {
+    for(let k in TARGETS) {
+        if(TARGETS[k] === 0) {
+            document.getElementById(`row-${k}`).style.display = 'none';
+            continue;
+        } else {
+            document.getElementById(`row-${k}`).style.display = 'flex';
+        }
+        let el = document.getElementById(`cnt-${k}`);
+        let row = document.getElementById(`row-${k}`);
+        let bar = document.getElementById(`bar-${k}`);
+        let cur = collected[k];
+        let tot = TARGETS[k];
+        let pct = (cur / tot) * 100;
+        bar.style.width = `${pct}%`;
+        if(cur >= tot) {
+            el.innerText = "MAX";
+            row.classList.add('max');
+        } else {
+            el.innerText = `${cur}/${tot}`;
+            row.classList.remove('max');
+        }
+    }
+}
+
+function checkWin() {
+    let win = true;
+    for(let k in TARGETS) if(collected[k] < TARGETS[k]) win = false;
+    if(win) endGame(true);
+}
+
+function endGame(win) {
+    // AUDIO: STOP GAMEPLAY MUSIC
+    isPlayingGameplayMusic = false;
+    
+    // AUDIO: PLAY WIN/LOSE
+    if(win) {
+        Win.play();
+    } else {
+        // LOSE SEQUENCE: Gong -> Wait -> Nonchalant
+        playGong();
+        setTimeout(() => {
+            Theme.play();
+        }, 500);
+    }
+
+    gameState = 'END';
+    winCondition = win;
+    document.getElementById('game-hud').style.display = 'none';
+    
+    // Restore box for end screen
+    const container = document.getElementById('story-container');
+    container.style.display = 'block';
+    container.style.background = '#fff';
+    container.style.border = '0.5vmin solid #000';
+    container.style.boxShadow = '1vmin 1vmin 0px rgba(0,0,0,0.2)';
+
+    const txt = document.getElementById('story-text');
+    if (win) txt.innerHTML = "It’s the perfect color combo!<br>The princess loves your hat!<br>She can’t stop laughing!";
+    else txt.innerHTML = "There’s not enough colors...<br>The princess thinks your hat is ugly.<br>She guillotines you.";
+    document.getElementById('end-bars').style.display = 'block';
+    const barBox = document.getElementById('end-bars');
+    barBox.innerHTML = ''; 
+    for(let k in TARGETS) {
+        if(TARGETS[k] === 0) continue; 
+        let pct = Math.min(100, (collected[k] / TARGETS[k]) * 100);
+        barBox.innerHTML += `
+            <div class="end-row">
+                <span class="end-label">${k}</span>
+                <div class="progress-track"><div class="bar-fill" style="background:${COLORS[k]}; width:${pct}%"></div></div>
+                <span class="end-label">${collected[k]}/${TARGETS[k]}</span>
+            </div>`;
+    }
+    document.getElementById('main-btn').innerText = "TRY AGAIN";
+}
+
+function drawGame() {
+    ctx.save();
+    if (timeLeft <= 30) {
+        const shakeIntensity = ((30 - timeLeft) / 30) * (pxScale * 0.5); 
+        ctx.translate((Math.random()-0.5)*shakeIntensity*10, (Math.random()-0.5)*shakeIntensity*10);
+    }
+    if (spillTimer > 0) {
+         ctx.save();
+         ctx.globalAlpha = spillTimer / 60;
+         ctx.fillStyle = spillColor; 
+         ctx.fillRect(0, 0, cvs.width, cvs.height);
+         ctx.restore();
+    }
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, cvs.width, cvs.height);
+    const GROUND_Y = cvs.height - (pxScale * 4); 
+    ctx.fillStyle = '#f2f2f2';
+    ctx.fillRect(-100, GROUND_Y, cvs.width + 200, cvs.height - GROUND_Y + 100);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(-100, GROUND_Y, cvs.width + 200, Math.max(2, pxScale * 0.5));
+    ctx.save();
+    
+    // MASSIVE TEXT FOR STATUS
+    ctx.font = `bold ${pxScale * 6.0}px "Press Start 2P"`;
+    ctx.textAlign = 'center';
+    ctx.shadowColor = '#000'; ctx.shadowOffsetX = 3; ctx.shadowOffsetY = 3;
+    let textY = cvs.height * 0.3; // Centered higher up
+    
+    if(colorblindTimer > 0) {
+        ctx.fillStyle = (Math.floor(Date.now()/100)%2===0) ? '#fff' : '#ff0';
+        ctx.fillText("COLORBLIND!", cvs.width/2, textY);
+        textY += pxScale * 8;
+    }
+    if(slowTimer > 0) {
+        ctx.fillStyle = '#ddd';
+        ctx.fillText("TIME SLOW!", cvs.width/2, textY);
+    }
+    ctx.restore();
+    
+    let bob = Math.sin(Date.now() / (Math.abs(player.vx) > 0.1 ? 50 : 300)) * (player.h * 0.05);
+    let spillShake = 0;
+    if (spillTimer > 0) spillShake = (Math.random() - 0.5) * (pxScale * 2);
+    
+    // Draw Player using Overlay (Dynamic Expression)
+    drawJester(player.x + spillShake, player.y + bob, pxScale, player.expression);
+    
+    items.forEach(it => {
+        let drawScale = it.w / 7;
+
+        if(it.type === 'BOMB') {
+            const bombColors = { 'R': '#f00', 'F': '#fa0', 'B': '#000', 'W': '#fff' };
+            drawMap(BOMB_SPRITE, it.x, it.y, drawScale, bombColors);
+        } else if (it.type === 'EYE') {
+             const eyeColors = { '0': '#000', '1': '#fff', 'R': '#f00', 'Y': '#ff0', 'B': '#00f', 'G': '#0f0' };
+             drawMap(EYE_SPRITE, it.x, it.y, drawScale, eyeColors);
+        } else if (it.type === 'CLOCK') {
+             const clockColors = { '#': '#da2', 'W': '#fff', '|': '#000', '-': '#000', 'o': '#000' };
+             drawMap(CLOCK_SPRITE, it.x, it.y, drawScale, clockColors);
+        } else {
+            let renderColor = it.color;
+            let renderLight = LIGHT_COLORS[it.type];
+            if(colorblindTimer > 0) {
+                const keys = ['R', 'Y', 'B', 'G'];
+                const randKey = keys[Math.floor(Math.random() * 4)];
+                renderColor = COLORS[randKey];
+                renderLight = LIGHT_COLORS[randKey];
+            }
+            const colorMap = { '#': '#000', 'M': renderColor, 'A': renderLight };
+            if (it.variant === 2) { 
+                ctx.save();
+                const cx = it.x + (it.w/2);
+                const cy = it.y + (it.h/2);
+                ctx.translate(cx, cy);
+                ctx.rotate(20 * Math.PI / 180); 
+                ctx.translate(-cx, -cy);
+                drawMap(GEM_VARIANTS[2], it.x, it.y, drawScale, colorMap);
+                ctx.restore();
+            } else {
+                drawMap(GEM_VARIANTS[it.variant || 0], it.x, it.y, drawScale, colorMap);
+            }
+        }
+    });
+    
+    particles.forEach(p => {
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.life / (p.type==='sparkle'?30:60);
+        ctx.fillRect(p.x, p.y, p.size, p.size);
+        ctx.globalAlpha = 1.0;
+    });
+    // INCREASED TEXT SIZE and changed font
+    ctx.font = `bold ${pxScale * 3.0}px "Press Start 2P"`;
+    ctx.textAlign = "center";
+    floatText.forEach(f => {
+        ctx.fillStyle = '#000';
+        ctx.fillText(f.txt, f.x + 2, f.y + 2); 
+        ctx.fillStyle = f.color;
+        ctx.fillText(f.txt, f.x, f.y);
+    });
+    ctx.restore();
+}
+
+function drawEndScene() {
+    const cx = cvs.width/2;
+    // ADJUSTED POSITION: Higher up (35% height) to allow text box space
+    const cy = (cvs.height * 0.35); 
+    const scale = pxScale * 1.5; 
+    
+    const spacing = cvs.width * 0.1;
+
+    if (winCondition) {
+        // Princess Left, Jester Right
+        drawCustomSprite('PRINCESS_HAPPY', cx + spacing - (16*scale), cy - (16*scale), scale);
+        // Winning Jester with HAT
+        drawJester(cx - spacing - (16*scale), cy - (16*scale) + (5*scale), scale, 'HAPPY');
+    } else {
+        // Princess Angry, Jester Sad with PARTIAL HAT
+        drawCustomSprite('PRINCESS_ANGRY', cx + spacing - (16*scale), cy - (16*scale), scale);
+        // Losing Jester with PARTIAL HAT (using DECAP base)
+        drawJester(cx - spacing - (16*scale), cy - (16*scale) + (5*scale), scale, 'DECAP');
+    }
+}
+
+// Generic Map Drawer (for Gems, Icons)
+function drawMap(map, x, y, scale, colorMap) {
+    const w = map[0].length;
+    const h = map.length;
+    for(let r=0; r<h; r++) {
+        for(let c=0; c<w; c++) {
+            let char = map[r][c];
+            if (char === '.') continue;
+            ctx.fillStyle = colorMap[char] || '#000';
+            ctx.fillRect(x + c*scale, y + r*scale, scale+0.5, scale+0.5);
+        }
+    }
+}
+
+// Renamed to drawJester and added baseSpriteName param
+function drawJester(x, y, scale, baseSpriteName, forceFullHat = false) {
+    const hatMap = JESTER_HAT_MAP;
+    const baseMap = SPRITES[baseSpriteName] || SPRITES['HAPPY'];
+
+    const h = 32;
+    const w = 32;
+
+    for(let r=0; r<h; r++) {
+        for(let c=0; c<w; c++) {
+            // Get Hat Pixel
+            let char = hatMap[r][c];
+            
+            // Get Base Pixel
+            let baseVal = baseMap[r][c];
+
+            let drawColor = null;
+
+            if (char !== '.') {
+                // HAT PIXEL
+                if (char === '#') drawColor = '#000';
+                else if (REGION_MAP[char]) {
+                    const reg = REGION_MAP[char];
+                    // FORCE FULL HAT logic
+                    if (forceFullHat) {
+                        drawColor = COLORS[reg.c];
+                    }
+                    else if (shineTimers[char] && shineTimers[char] > 0) {
+                         drawColor = (Math.floor(shineTimers[char]/4)%2===0) ? '#fff' : '#ffffaa';
+                    }
+                    else if (spillTimer > 0 && Math.floor(spillTimer / 4) % 2 === 0) {
+                        drawColor = spillColor; 
+                    }
+                    else if (collected[reg.c] >= reg.i) {
+                        drawColor = COLORS[reg.c];
+                    } 
+                    else {
+                        // DEFAULT HAT COLOR (Light Gray) for uncollected regions
+                        drawColor = '#ddd';
+                    }
+                }
+            } else if (baseVal !== 0) {
+                // BASE PIXEL
+                if (baseVal === 1) drawColor = '#000';
+                else if (baseVal === 2) drawColor = '#29A7E8'; // Blue
+                else if (baseVal === 3) drawColor = '#FFF780'; // Yellow
+            }
+
+            if (drawColor) {
+                ctx.fillStyle = drawColor;
+                ctx.fillRect(x + c*scale, y + r*scale, scale+0.5, scale+0.5);
+            }
+        }
+    }
+}
+
+function drawCustomSprite(name, cx, cy, scale) {
+    if (SPRITES[name]) {
+        const map = SPRITES[name];
+        
+        const w = 32;
+        const h = 32;
+        // cx, cy passed here are TOP-LEFT coordinates
+        
+        for(let r=0; r<h; r++) {
+            for(let c=0; c<w; c++) {
+                let val = map[r][c];
+                if (val === 0) continue;
+                if (val === 1) ctx.fillStyle = '#000';
+                else if (val === 2) ctx.fillStyle = '#29A7E8';
+                else if (val === 3) ctx.fillStyle = '#FFF780';
+                ctx.fillRect(cx + c*scale, cy + r*scale, scale+0.5, scale+0.5);
+            }
+        }
+        return;
+    }
+}
+
+function handleStart(e) {
+    // FIRST INTERACTION: Initialize Audio Context and Start STROLL Music
+    if(!audioCtx) initAudio();
+    if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    
+    // Only play if in Story/Tutorial (Not Game, Not End)
+    if (gameState === 'STORY' || gameState === 'TUTORIAL') {
+        Stroll.play();
+    }
+
+    // START GAME ON TAP if in Tutorial
+    if (gameState === 'TUTORIAL') {
+        startGame();
+        return;
+    }
+    
+    if (gameState !== 'GAME') return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    activePointers[e.pointerId] = { x: e.clientX, startX: e.clientX, startY: e.clientY, startTime: Date.now() };
+    input.active = true;
+}
+
+function handleMove(e) {
+    if (activePointers[e.pointerId]) {
+        activePointers[e.pointerId].x = e.clientX;
+    }
+}
+
+function handleEnd(e) {
+    if (gameState !== 'GAME') return;
+    const p = activePointers[e.pointerId];
+    if (p) {
+        const dt = Date.now() - p.startTime;
+        const dy = e.clientY - p.startY;
+        let isJump = false;
+        if (dt < 300 && dy < (-5 * pxScale)) isJump = true;
+        
+        if (isJump && player.ground && player.jumpCooldown <= 0) {
+            // SNAPPIER JUMP
+            const TARGET_H = cvs.height / 3.5;
+            const GRAVITY = pxScale * 0.23; // INCREASED GRAVITY
+            const JUMP_VEL = -Math.sqrt(2 * GRAVITY * TARGET_H);
+            player.vy = JUMP_VEL;
+            player.ground = false;
+            player.jumpCooldown = 25; // INCREASED COOLDOWN
+        }
+    }
+    delete activePointers[e.pointerId];
+    if (Object.keys(activePointers).length === 0) input.active = false;
+}
+
+window.addEventListener('pointerdown', handleStart);
+window.addEventListener('pointermove', handleMove);
+window.addEventListener('pointerup', handleEnd);
+window.addEventListener('pointercancel', handleEnd);
+
+init();
+
+</script>
+</body>
+</html>
