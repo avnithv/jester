@@ -178,9 +178,52 @@
         position: relative;
     }
 
+    /* ORIENTATION WARNING STYLES */
+#orientation-warning {
+    display: none; /* Hidden by default */
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: #fff;
+    z-index: 9999; /* Stay on top of everything */
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.warning-content {
+    padding: 20px;
+}
+
+.phone-icon {
+    font-size: 80px;
+    margin-bottom: 20px;
+    animation: rotatePhone 2s ease-in-out infinite;
+}
+
+@keyframes rotatePhone {
+    0% { transform: rotate(0deg); }
+    50% { transform: rotate(90deg); }
+    100% { transform: rotate(90deg); }
+}
+
+/* ONLY SHOW IF WIDTH < HEIGHT (PORTRAIT) */
+@media screen and (orientation: portrait) {
+    #orientation-warning {
+        display: flex;
+    }
+}
+
 </style>
 </head>
 <body oncontextmenu="return false;">
+
+<div id="orientation-warning">
+    <div class="warning-content">
+        <div class="phone-icon">📱</div>
+        <p>PLEASE ROTATE YOUR SCREEN FOR THE BEST EXPERIENCE!</p>
+    </div>
+</div>
 
 <div id="ui-layer">
     <div id="game-hud">
@@ -1583,7 +1626,7 @@ function drawGame() {
 function drawEndScene() {
     const cx = cvs.width/2;
     // ADJUSTED POSITION: Higher up (35% height) to allow text box space
-    const cy = (cvs.height * 0.35); 
+    const cy = (cvs.height * 0.15); 
     const scale = pxScale * 1.5; 
     
     const spacing = cvs.width * 0.1;
