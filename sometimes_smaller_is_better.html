@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Sir Jester's Responsive Quest</title>
+<title>Sir Jester's Quest</title>
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
@@ -46,45 +46,45 @@
     }
     .btn:active { transform: translate(0.3vmin, 0.3vmin); box-shadow: 0.2vmin 0.2vmin 0 #888; }
 
-    /* TOP NAVIGATION BAR */
+    /* HUD OVERLAY - Top Right */
     #game-hud {
-        position: absolute; top: 0; left: 0; width: 100%;
-        display: none; /* Flex when active */
-        flex-direction: row; 
-        align-items: center; 
-        justify-content: space-evenly;
-        background: rgba(255,255,255,0.95);
-        border-bottom: 0.5vmin solid #000;
-        padding: 1vmin 0;
-        box-sizing: border-box;
+        position: absolute; top: 2vmin; right: 2vmin;
+        display: none; 
+        flex-direction: column; 
+        align-items: flex-end; 
+        gap: 1vmin;
         pointer-events: none;
     }
 
-    /* TIMER - Inside Navbar */
+    /* TIMER */
     #timer {
-        font-size: 2.5vmin; color: #000; 
-        padding: 0 1vmin;
-        white-space: nowrap;
+        font-size: 3.75vmin; /* 1.5x larger */
+        color: #000; 
+        text-shadow: 0.2vmin 0.2vmin 0 #fff;
+        margin-bottom: 0.5vmin;
+        text-align: right;
+        font-weight: bold;
     }
 
     .hud-row {
-        display: flex; align-items: center; gap: 0.5vmin;
-        background: #fff;
-        padding: 0.5vmin; border: 0.3vmin solid #000;
+        display: flex; align-items: center; gap: 0.8vmin;
+        background: rgba(255,255,255,0.9);
+        padding: 0.8vmin; border: 0.4vmin solid #000;
         position: relative;
-        flex-grow: 1;
-        max-width: 20%; /* Distribute space */
-        margin: 0 0.5vmin;
+        width: 42vmin; /* 1.5x wider (was 28) */
+        box-sizing: border-box;
     }
     
     .color-icon { 
-        width: 2.5vmin; height: 2.5vmin; 
-        border: 0.3vmin solid #000; flex-shrink: 0; 
+        width: 4.5vmin; height: 4.5vmin; /* 1.5x larger (was 3) */
+        border: 0.4vmin solid #000; flex-shrink: 0; 
     }
     
     /* PROGRESS BARS */
     .bar-container {
-        flex-grow: 1; height: 2vmin; background: #ccc; border: 0.2vmin solid #000;
+        flex-grow: 1; 
+        height: 4.5vmin; /* 1.5x larger (was 3) */
+        background: #ccc; border: 0.4vmin solid #000;
         position: relative;
     }
     .bar-fill {
@@ -93,24 +93,27 @@
     }
     .hud-txt { 
         position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-        font-size: 1.2vmin; color: #000; text-shadow: 0.2vmin 0.2vmin 0 #fff; z-index: 2;
+        font-size: 2.25vmin; /* 1.5x larger (was 1.5) */
+        color: #000; text-shadow: 0.2vmin 0.2vmin 0 #fff; z-index: 2;
     }
 
-    /* SPILL MESSAGE - Floats down from navbar now */
+    /* SPILL MESSAGE */
     .spill-msg {
-        position: absolute; top: 120%; left: 50%; transform: translateX(-50%);
-        font-size: 2vmin; color: #d00; white-space: nowrap; 
+        position: absolute; top: 50%; right: 105%; transform: translateY(-50%);
+        font-size: 2.5vmin; color: #d00; white-space: nowrap; 
         font-weight: bold; opacity: 0; pointer-events: none;
         text-shadow: 0.2vmin 0.2vmin 0 #fff;
-        background: rgba(255,255,255,0.8);
+        background: rgba(255,255,255,0.9);
+        padding: 0.5vmin; border: 0.2vmin solid #000;
+        z-index: 10;
     }
     .spill-anim {
-        animation: floatDown 1s ease-out forwards;
+        animation: popOut 1s ease-out forwards;
     }
 
-    @keyframes floatDown {
-        0% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
-        100% { opacity: 0; transform: translateX(-50%) translateY(2vmin) scale(1.2); }
+    @keyframes popOut {
+        0% { opacity: 1; transform: translateY(-50%) translateX(0) scale(1); }
+        100% { opacity: 0; transform: translateY(-50%) translateX(-2vmin) scale(1.2); }
     }
 
     /* MAX VIBRATION */
@@ -140,7 +143,7 @@
         display: flex; align-items: center; justify-content: space-between;
         margin-bottom: 1.5vmin; font-size: 2vmin; width: 100%;
     }
-    .end-label { width: 3vmin; text-align: center; font-weight: bold; }
+    .end-label { width: 4vmin; text-align: center; font-weight: bold; }
     .progress-track {
         flex-grow: 1; height: 3vmin; background: #ccc; margin: 0 2vmin; border: 0.3vmin solid #000;
         position: relative;
@@ -172,8 +175,8 @@
         </div>
         <div class="hud-row" id="row-G">
             <div class="spill-msg" id="msg-G"></div>
-            <div class="color-icon" style="background:#0f0"></div>
-            <div class="bar-container"><div id="bar-G" class="bar-fill" style="background:#0f0"></div><span id="cnt-G" class="hud-txt">0/1</span></div>
+            <div class="color-icon" style="background:#4dff4d"></div>
+            <div class="bar-container"><div id="bar-G" class="bar-fill" style="background:#4dff4d"></div><span id="cnt-G" class="hud-txt">0/1</span></div>
         </div>
     </div>
 
@@ -191,8 +194,8 @@
 <script>
 // --- CONFIG ---
 const MAX_TIME = 90; 
-const COLORS = { R:'#f00', Y:'#ff0', B:'#00f', G:'#0f0' };
-const LIGHT_COLORS = { R:'#f88', Y:'#ffb', B:'#66f', G:'#6f6' }; 
+const COLORS = { R:'#f00', Y:'#ff0', B:'#00f', G:'#4dff4d' };
+const LIGHT_COLORS = { R:'#f88', Y:'#ffb', B:'#66f', G:'#99ff99' }; 
 
 let TARGETS = { R:0, Y:0, B:0, G:0 }; 
 let REGION_MAP = {}; 
@@ -396,7 +399,7 @@ function updatePhysics() {
 
     // Input (Horizontal Only)
     let moveDir = 0;
-    const center = cvs.width / 2;
+    const center = cvs.width / 2; 
     for (let id in activePointers) {
         const p = activePointers[id];
         if (p.x < center) moveDir = -1;
@@ -428,16 +431,18 @@ function updatePhysics() {
     
     if (spillTimer > 0) spillTimer--;
 
-    // Spawning
+    // Spawning - 1.5x SLOWER START
     let difficulty = (MAX_TIME - timeLeft) / MAX_TIME; 
-    let spawnRate = 0.03 + (difficulty * 0.08); 
+    // Base rate reduced to 0.013 (from 0.02)
+    // Scale rate kept at 0.04 to maintain difficulty curve
+    let spawnRate = 0.013 + (difficulty * 0.04); 
     if (Math.random() < spawnRate) spawnItem();
 
     for (let i = items.length - 1; i >= 0; i--) {
         let it = items[i];
         
-        // SPEED: 1.5x on top of previous 0.9 = 1.35
-        it.y += pxScale * 1.35; 
+        // Falling speed reduced to 0.8 (from 1.2)
+        it.y += pxScale * 0.8; 
 
         if (checkRectCollide(player, {x:it.x, y:it.y, w:it.w, h:it.h})) {
             if (collected[it.type] >= TARGETS[it.type]) {
@@ -698,7 +703,7 @@ function handleEnd(e) {
         const dt = Date.now() - p.startTime;
         const dy = e.clientY - p.startY;
         
-        // FLICK JUMP LOGIC: Reduced threshold to 5px scale (Very Sensitive)
+        // FLICK JUMP LOGIC: 5px scale sensitive threshold
         if (dt < 300 && dy < (-5 * pxScale) && player.ground) {
             const TARGET_H = cvs.height / 3;
             const GRAVITY = pxScale * 0.08;
