@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Mosaic Camo</title>
+<style>
+    body { margin: 0; background: #eee; font-family: 'Arial Black', sans-serif; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
+    canvas { display: block; width: 100%; height: 100%; }
+    
+    /* --- HUD --- */
+    #hud { 
+        position: absolute; top: 0; left: 0; width: 100%; 
+        background: rgba(255,255,255,0.9); display: flex; align-items: flex-start; justify-content: space-around; 
+        border-bottom: 4px solid #000; z-index: 10; padding: 10px 0 5px 0;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    }
+    
+    .hud-col { display: flex; flex-direction: column; align-items: center; width: 22%; }
+
+    .bar-container { 
+        position: relative; width: 100%; height: 40px; 
+        background: #ccc; border: 3px solid #333; border-radius: 8px; overflow: hidden;
+    }
+    .bar-fill { 
+        height: 100%; width: 0%; transition: width 0.1s linear;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 16px; color: rgba(0,0,0,0.6); white-space: nowrap; overflow: hidden;
+    }
+    
+    .bar-container.full { border-color: #000; animation: shake 0.4s infinite; }
+    .bar-container.full .bar-fill { width: 100% !important; color: #fff; font-weight: 900; text-shadow: 1px 1px 0 #000; }
+    
+    .spill-msg {
+        height: 20px; margin-top: 5px; font-size: 12px; color: #d00; 
+        font-weight: 900; opacity: 0; white-space: nowrap; text-align: center;
+        transition: opacity 0.1s;
+    }
+    .spill-msg.active { opacity: 1; animation: pop 0.1s; }
+
+    @keyframes shake {
+        0% { transform: translate(1px, 1px) rotate(0deg); }
+        20% { transform: translate(-2px, 0px) rotate(1deg); }
+        40% { transform: translate(1px, -1px) rotate(1deg); }
+        60% { transform: translate(-2px, 1px) rotate(0deg); }
+        80% { transform: translate(-1px, -1px) rotate(1deg); }
+        100% { transform: translate(1px, -2px) rotate(-1deg); }
+    }
+    @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.4); } 100% { transform: scale(1); } }
+
+    #overlay { 
+        position: fixed; inset: 0; background: rgba(255,255,255,0.95); 
+        display: flex; flex-direction: column; align-items: center; justify-content: center; 
+        z-index: 100; transition: opacity 0.3s;
+    }
+    h1 { font-size: 40px; margin: 0; text-transform: uppercase; letter-spacing: -2px; }
+    p { color: #666; margin-bottom: 30px; font-weight: normal; font-family: sans-serif; text-align: center; max-width: 300px; }
+    button { 
+        padding: 20px 60px; font-size: 24px; font-weight: 900; border: 4px solid #000; 
+        background: #fff; cursor: pointer; text-transform: uppercase; 
+        box-shadow: 6px 6px 0 #000; transition: transform 0.1s;
+    }
+    button:active { transform: translate(4px, 4px); box-shadow: 2px 2px 0 #000; }
+</style>
+</head>
+<body>
+
+<div id="hud">
+    <div class="hud-col"><div class="bar-container" id="con-R"><div id="fill-R" class="bar-fill" style="background:#ff4444">0/5</div></div><div id="msg-R" class="spill-msg"></div></div>
+    <div class="hud-col"><div class="bar-container" id="con-G"><div id="fill-G" class="bar-fill" style="background:#00dd44">0/5</div></div><div id="msg-G" class="spill-msg"></div></div>
+    <div class="hud-col"><div class="bar-container" id="con-B"><div id="fill-B" class="bar-fill" style="background:#4466ff">0/5</div></div><div id="msg-B" class="spill-msg"></div></div>
+    <div class="hud-col"><div class="bar-container" id="con-Y"><div id="fill-Y" class="bar-fill" style="background:#ffdd00">0/5</div></div><div id="msg-Y" class="spill-msg"></div></div>
+</div>
+
+<div id="overlay">
+    <h1>Mosaic<br>Amorphous</h1>
+    <p>Swipe to Move & Jump.<br>Fill the scattered blobs.</p>
+    <button onclick="start()">INIT</button>
+</div>
+
+<canvas id="c"></canvas>
+
+<script>
+// --- ASSETS ---
+// Amorphous "Camo" Pattern Map
+// Regions are blobs rather than stripes
+const PLAYER_MAP = [
+    "...........########...........",
+    "..........#11116666#..........", // 1: Red Blob, 6: Blue Blob
+    "..........#11116666#..........",
+    ".........#1111666AA6#.........", // A: Green Blob (intruding)
+    ".........#####66AAAA##........",
+    ".......##2222#66AAAACC##......", // 2: Blue Blob (left shoulder), C: Red Blob (Right)
+    ".......#22222#AAAAAACC#.......",
+    ".......#######AAAAAACC#.......",
+    "......#BBBBBBAAAAAAA##........", // B: Yellow Blob
+    "......#BBBBBB33333333#........", // 3: Green Blob (Belt)
+    "......########3333333#........",
+    "......#777777#########........", // 7: Red Blob
+    ".....#7777777#DDD888DD#.......", // D: Yellow Blob, 8: Blue Blob
+    ".....#7777777#DDD888DD#.......",
+    ".....#########DDDDDDDD#.......",
+    "....#EEEEEEEE#########D88#....", // E: Green Blob
+    "....#EEEEEEEE#9999999#888#....", // 9: Red Blob
+    "....##########9999999#####....",
+    "...#FFFFFFFF##9999999#0000#...", // F: Blue Blob, 0: Yellow Blob
+    "...#FFFFFFFF#44444444#0000#...", // 4: Red Blob
+    "...##########44444444######...",
+    "..#555555555#44444444#GGGGG#..", // 5: Green Blob, G: Blue Blob
+    "..#555555555##########GGGGG#..",
+    "..##########HHHHHHHHH#######..", // H: Red Blob
+    ".#IIIIIIIII#HHHHHHHHH#JJJJJJ#.", // I: Yellow Blob, J: Green Blob
+    ".#IIIIIIIII###########JJJJJJ#.",
+    ".##########KKKKKKKKKK########.", // K: Blue Blob
+    "#LLLLLLLLL#KKKKKKKKKK#MMMMMMM#", // L: Red Blob, M: Yellow Blob
+    "#LLLLLLLLL############MMMMMMM#",
+    "###########          #########"
+];
+
+// Color Scramble Logic to ensure amorphous blobs don't match neighbors
+// R(1,4,7,9,C,H,L), G(A,3,E,5,J), B(6,2,8,F,G,K), Y(B,D,0,I,M)
+const SEGMENT_INFO = {
+    '1':{c:'R',n:1}, '4':{c:'R',n:2}, '7':{c:'R',n:3}, '9':{c:'R',n:4}, 'C':{c:'R',n:5}, 'H':{c:'R',n:1}, 'L':{c:'R',n:2},
+    'A':{c:'G',n:1}, '3':{c:'G',n:2}, 'E':{c:'G',n:3}, '5':{c:'G',n:4}, 'J':{c:'G',n:5},
+    '6':{c:'B',n:1}, '2':{c:'B',n:2}, '8':{c:'B',n:3}, 'F':{c:'B',n:4}, 'G':{c:'B',n:5}, 'K':{c:'B',n:1},
+    'B':{c:'Y',n:1}, 'D':{c:'Y',n:2}, '0':{c:'Y',n:3}, 'I':{c:'Y',n:4}, 'M':{c:'Y',n:5}
+};
+
+const GEM_MAP = [
+    "..###..", ".#@@@#.", "#@@*@@#", "#@***@#", "#@@*@@#", ".#@@@#.", "..###.."
+];
+
+const COLORS = { R: '#ff4444', G: '#00dd44', B: '#4466ff', Y: '#ffdd00' };
+const TARGET = 5;
+
+// --- ENGINE ---
+const cvs = document.getElementById('c');
+const ctx = cvs.getContext('2d');
+let state = { active: false, items: [], particles: [], quota: {R:0,G:0,B:0,Y:0} };
+let player = { x: 0, y: 0, w: 100, h: 100, vx: 0, vy: 0, ground: false };
+let input = { active: false, startX:0, startY:0, currX:0, currY:0, prevX:0 };
+let msgTimers = { R:null, G:null, B:null, Y:null };
+
+function init() {
+    cvs.width = window.innerWidth;
+    cvs.height = window.innerHeight;
+    player.y = cvs.height - 150;
+    player.x = cvs.width/2 - player.w/2;
+}
+
+function drawSprite(map, dx, dy, size, type, color) {
+    const px = size / map.length;
+    map.forEach((row, r) => {
+        for (let c = 0; c < row.length; c++) {
+            const char = row[c];
+            if (char === ' ' || char === '.') continue;
+            let fill = null;
+            if (char === '#') fill = '#111';
+            else if (type === 'gem') fill = (char === '@') ? color : '#fff';
+            else if (type === 'player' && SEGMENT_INFO[char]) {
+                const seg = SEGMENT_INFO[char];
+                fill = (state.quota[seg.c] >= seg.n) ? COLORS[seg.c] : '#ddd';
+            }
+            if (fill) {
+                ctx.fillStyle = fill;
+                ctx.fillRect(Math.floor(dx+c*px), Math.floor(dy+r*px), Math.ceil(px+0.5), Math.ceil(px+0.5));
+            }
+        }
+    });
+}
+
+function spawnParticles(x, y, color, amount) {
+    const count = amount * 15; 
+    for(let i=0; i<count; i++) {
+        state.particles.push({
+            x: x + 20 + Math.random()*40, 
+            y: y + 20 + Math.random()*40,
+            vx: (Math.random() - 0.5) * (15 + amount * 5),
+            vy: (Math.random() - 1.2) * (15 + amount * 5),
+            size: Math.random() * 8 + 4,
+            life: 1.0,
+            color: color,
+            gravity: true
+        });
+    }
+}
+
+function showSpillMessage(type, amount) {
+    const el = document.getElementById(`msg-${type}`);
+    el.innerText = `-${amount} SPILLED!`;
+    el.classList.add('active');
+    if (msgTimers[type]) clearTimeout(msgTimers[type]);
+    msgTimers[type] = setTimeout(() => { el.classList.remove('active'); }, 1500);
+}
+
+function update() {
+    if (!state.active) return;
+
+    let targetVx = 0;
+    if (input.active) {
+        let dist = input.currX - input.startX;
+        let fingerDelta = input.currX - input.prevX;
+
+        // Instant turn
+        if (Math.abs(fingerDelta) > 2) {
+            if ((dist > 0 && fingerDelta < 0) || (dist < 0 && fingerDelta > 0)) {
+                input.startX = input.currX;
+                dist = 0;
+            }
+        }
+
+        if (Math.abs(dist) > 5) {
+            targetVx = dist / 8; 
+            targetVx = Math.max(-15, Math.min(15, targetVx));
+        }
+    }
+
+    // Inertia & Friction (Low inertia/High friction per instruction)
+    if (targetVx !== 0) {
+        const friction = (player.vx * targetVx < 0) ? 0.4 : 0.3;
+        player.vx += (targetVx - player.vx) * friction;
+    } else {
+        player.vx *= 0.6; // Quick stop
+        if(Math.abs(player.vx) < 0.1) player.vx = 0;
+    }
+    
+    player.vy += 1.5;
+    player.x += player.vx;
+    player.y += player.vy;
+
+    if (player.y > cvs.height - player.h - 50) {
+        player.y = cvs.height - player.h - 50;
+        player.vy = 0;
+        player.ground = true;
+    }
+
+    if (player.x < 0) { 
+        player.x = 0; player.vx = 0;
+        if(input.active && input.currX > input.startX) input.startX = input.currX;
+    }
+    if (player.x > cvs.width - player.w) { 
+        player.x = cvs.width - player.w; player.vx = 0;
+        if(input.active && input.currX < input.startX) input.startX = input.currX;
+    }
+
+    if (Math.random() < 0.04) {
+        const k = ['R','G','B','Y'][Math.floor(Math.random()*4)];
+        state.items.push({ x: Math.random()*(cvs.width-60), y: -60, type: k, c: COLORS[k], spd: 6+Math.random()*5 });
+    }
+
+    for (let i = state.items.length - 1; i >= 0; i--) {
+        let it = state.items[i];
+        it.y += it.spd;
+
+        if (it.x < player.x + player.w && it.x + 50 > player.x &&
+            it.y < player.y + player.h && it.y + 50 > player.y) {
+            
+            if (state.quota[it.type] >= TARGET) {
+                const loss = Math.floor(Math.random() * 3) + 1;
+                state.quota[it.type] = Math.max(0, state.quota[it.type] - loss);
+                spawnParticles(player.x, player.y, it.c, loss * 1.5); 
+                showSpillMessage(it.type, loss);
+            } else {
+                state.quota[it.type]++;
+                spawnParticles(it.x, it.y, it.c, 0.2);
+            }
+            updateHUD();
+            checkWin();
+            state.items.splice(i, 1);
+        } else if (it.y > cvs.height) state.items.splice(i, 1);
+    }
+
+    for (let i = state.particles.length - 1; i >= 0; i--) {
+        let p = state.particles[i];
+        p.x += p.vx; p.y += p.vy; p.life -= 0.02;
+        if (p.gravity) {
+            p.vy += 0.8;
+            if (p.y > cvs.height - 50) { p.y = cvs.height - 50; p.vy *= -0.6; }
+        }
+        if (p.life <= 0) state.particles.splice(i, 1);
+    }
+
+    draw();
+    if(input.active) input.prevX = input.currX;
+    requestAnimationFrame(update);
+}
+
+function draw() {
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+    ctx.fillStyle = "#ddd";
+    ctx.fillRect(0, cvs.height - 50, cvs.width, 50);
+    drawSprite(PLAYER_MAP, player.x, player.y, player.w, 'player');
+    state.items.forEach(it => drawSprite(GEM_MAP, it.x, it.y, 45, 'gem', it.c));
+    state.particles.forEach(p => {
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, p.size, p.size);
+        ctx.globalAlpha = 1.0;
+    });
+}
+
+function updateHUD() {
+    ['R','G','B','Y'].forEach(k => {
+        const con = document.getElementById(`con-${k}`);
+        const bar = document.getElementById(`fill-${k}`);
+        const q = state.quota[k];
+        const pct = (q / TARGET) * 100;
+        bar.style.width = pct + "%";
+        
+        if (q >= TARGET) {
+            con.classList.add('full');
+            bar.innerText = "MAX";
+        } else {
+            con.classList.remove('full');
+            bar.innerText = `${q} / ${TARGET}`;
+        }
+    });
+}
+
+function checkWin() {
+    if(['R','G','B','Y'].every(k => state.quota[k] >= TARGET)) {
+        state.active = false;
+        document.querySelector('#overlay h1').innerText = "RESTORED";
+        document.querySelector('#overlay p').innerText = "Mosaic Complete.";
+        document.getElementById('overlay').style.zIndex = 100;
+        document.getElementById('overlay').style.opacity = 1;
+    }
+}
+
+function start() {
+    state = { active: true, items: [], particles: [], quota: {R:0,G:0,B:0,Y:0} };
+    updateHUD();
+    document.getElementById('overlay').style.opacity = 0;
+    setTimeout(() => document.getElementById('overlay').style.zIndex = -1, 500);
+    player.x = cvs.width/2 - player.w/2;
+    update();
+}
+
+function handleStart(x, y) {
+    input.active = true;
+    input.startX = x; input.startY = y;
+    input.currX = x; input.currY = y;
+    input.prevX = x;
+}
+
+function handleMove(x, y) {
+    if(!input.active) return;
+    input.currX = x;
+    
+    // --- ORIGINAL SWIPE JUMP MECHANIC ---
+    // Detect fast upward flick
+    if (y - input.startY < -20 && player.ground) { 
+        player.vy = -25; 
+        player.ground = false; 
+        input.startY = y; // Reset anchor
+    }
+}
+
+function handleEnd() { input.active = false; }
+
+window.addEventListener('mousedown', e => handleStart(e.clientX, e.clientY));
+window.addEventListener('mousemove', e => handleMove(e.clientX, e.clientY));
+window.addEventListener('mouseup', handleEnd);
+window.addEventListener('touchstart', e => handleStart(e.touches[0].clientX, e.touches[0].clientY), {passive:false});
+window.addEventListener('touchmove', e => { e.preventDefault(); handleMove(e.touches[0].clientX, e.touches[0].clientY); }, {passive:false});
+window.addEventListener('touchend', handleEnd);
+
+window.onresize = init;
+init();
+
+</script>
+</body>
+</html>
