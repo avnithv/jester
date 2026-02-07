@@ -1,0 +1,43 @@
+const JESTER_HAT_MAP = [
+".......####.......#####.........",
+"......#AAAA##...##BBBCC#........",
+".....#AAADDDD#.#EEBBBBCC#.......",
+"....##FFFFDDD##EEE#BBCC#G#......",
+"....#FFFFFFDDH#E##IIIIJ##K##....",
+".###FFF###HHHHH#IIIIIJJJ###L#...",
+".#MM###.###HHH#NNNI####JJJ###...",
+".#MM#..#OO#HHH#NNN#PPPP##Q#RR#..",
+"..##..#OOOO##H#NN#SSS#PPP##R#...",
+".....#TTTOOOOOUU#SSS##VVVV###...",
+"...###TTT##OOUUUUSS#..##VV#WW#..",
+"..#XX####..##UUUUU#.....###WW#..",
+"..#XX#......#######.......####..",
+"...###..........................",
+"................................",
+"................................",
+"................................",
+"................................",
+"................................",
+"................................",
+"................................",
+"................................",
+"................................",
+"................................",
+"................................",
+"................................",
+"................................",
+"................................",
+"................................",
+"................................",
+"................................",
+"................................",
+];
+
+const CONCERNED_str = "32:;32:;32:;32:;32:;32:;32:;32:;32:;32:;32:;32:;11:QAB;10:QAAE;9:QEBAQ;9:RQAUQ;9:QQAQQ;9:QQAQQU;10:QBQEEE;4:VEQAARUE;4:RRFVVUFQ;4:QQAAAAU;5:UUAABU;10:QAB;11:QAE;12:QEQ;11:UBU;11:VVU;12:VF;13:UU;12:VE;16:U;";
+const DECAP_str = "32:;32:;32:;32:;32:;32:;32:;32:;32:;32:;32:;32:;11:QAB;10:QAAE;9:QRBEQ;9:QEAQQ;9:QRBEQ;9:QAAAQ;10:QFQE;11:QAF;12:VV;32:;11:VVQ;10:UABQ;10:QABE;10:QABE;10:RAVE;10:RVVE;9:VVFF;9:RVFR;10:VUQQ;12:VF;";
+const HAPPY_str = "32:;32:;32:;32:;32:;32:;32:;32:;32:;32:;32:;32:;11:QAB;10:QAAE;9:QUAUQ;9:RBBBQ;9:QAAAQ;9:QEBAQU;10:QFQEEE;4:VEQAARUE;4:RRFVVUFQ;4:QQAAAAU;5:UUAABU;10:QAB;11:QAE;12:QEQ;11:UBU;11:VVU;12:VF;13:UU;12:VE;16:U;";
+const PANGRY_str = "11:VXVQ;8:VVf1VQ;8:VX1fVV;6:VX1VX1U;5:VVVQVVVQ;5:VVVAFVVV;4:VVVAAVVVQ;3:VVVAAAVVU;3:VVUAAABVU;2:VVUQAAEFVQ;2:VVQFABQFVQ;2:VVQBQFAFVQ;2:VVQBABAFVQ;2:VVQBABAFVQ;2:VVQAAAAFVQ;2:VVQAAAAVVQ;2:VVUAVUBVVQ;2:VVVAAAFVV;2:VVVVABVVV;2:VVlAAAGlV;3:VWpQAFqVQ;3:Vap1VdqVQ;4:Vqn//ZVU;6:WlX/aQE;7:Van2qQE;6:QaqWqlU;5:QWqqqqQ;6:Vqqqqp;8:aqqqqk;7:aqqqqp;6:aqqqqqk;6:VVVVVVU;";
+const PCONCERNED_str = "11:VXVQ;8:VVf1VQ;8:VX1fVV;6:VX1VX1U;5:VVVQVVVQ;5:VVVAFVVV;4:VVVAAVVVQ;3:VVVAAAVVU;3:VVUAAABVU;2:VVUBABAFVQ;2:VVQFABQFVQ;2:VVQVABUFVQ;2:VVQVABUFVQ;2:VVQFABQFVQ;2:VVQAAAAFVQ;2:VVQAAAAVVQ;2:VVUAFQBVVQ;2:VVVAAAFVV;2:VVVVABVVV;2:VVlAAAGlV;3:VWpQAFqVQ;3:Vap1VdqVQ;4:Vqn//ZVU;6:WlX/aQE;7:Van2qQE;6:QaqWqlU;5:QWqqqqQ;6:Vqqqqp;8:aqqqqk;7:aqqqqp;6:aqqqqqk;6:VVVVVVU;";
+const PHAPPY_str = "11:VXVQ;8:VVf1VQ;8:VX1fVV;6:VX1VX1U;5:VVVQVVVQ;5:VVVAFVVV;4:VVVAAVVVQ;3:VVVAAAVVU;3:VVUAAABVU;2:VVUAAAAFVQ;2:VVQFABQFVQ;2:VVQQQEEFVQ;2:VVQAAAAFVQ;2:VVQAAAAFVQ;2:VVQAAAAFVQ;2:VVQAQQAVVQ;2:VVUAFABVVQ;2:VVVAAAFVV;2:VVVVABVVV;2:VVlAAAGlV;3:VWpQAFqVQ;3:Vap1VdqVQ;4:Vqn//ZVU;6:WlX/aQE;7:Van2qQE;6:QaqWqlU;5:QWqqqqQ;6:Vqqqqp;8:aqqqqk;7:aqqqqp;6:aqqqqqk;6:VVVVVVU;";
+const PSAD_str = "11:VXVQ;8:VVf1VQ;8:VX1fVV;6:VX1VX1U;5:VVVQVVVQ;5:VVVAFVVV;4:VVVAAVVVQ;3:VVVAAAVVU;3:VVUAAABVU;2:VVUBABAFVQ;2:VVQVABUFVQ;2:VVQVABUFVQ;2:VVQFABQFVQ;2:VVQgAAIFVQ;2:VVQgAAIFVQ;2:VVQAFACVVQ;2:VVUAQQBVVQ;2:VVVAAAFVV;2:VVVVABVVV;2:VVlAAAGlV;3:VWpQAFqVQ;3:Vap1VdqVQ;4:Vqn//ZVU;6:WlX/aQE;7:Van2qQE;6:QaqWqlU;5:QWqqqqQ;6:Vqqqqp;8:aqqqqk;7:aqqqqp;6:aqqqqqk;6:VVVVVVU;";
+const SAD_str = "32:;32:;32:;32:;32:;32:;32:;32:;32:;32:;32:;32:;11:QAB;10:QAAE;9:QUBQQ;9:QQBAQ;9:QYBQQ;9:QIAIQU;10:QFUkEE;4:VEQQERUE;4:RRFVVUFQ;4:QQAAAAU;5:UUAABU;10:QAB;11:QAE;12:QEQ;11:UBU;11:VVU;12:VF;13:UU;12:VE;16:U;";

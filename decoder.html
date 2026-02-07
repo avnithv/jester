@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compressed Image Viewer</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f0f0f0; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        textarea { width: 100%; height: 100px; margin-bottom: 10px; font-family: monospace; }
+        canvas { border: 1px solid #ccc; image-rendering: pixelated; width: 256px; height: 256px; display: block; margin: 20px auto; background: #fff; }
+        button { padding: 10px 20px; background: #29A7E8; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        button:hover { background: #1c87c0; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Image Decompressor</h2>
+    <p>Paste the content of the generated .txt file below:</p>
+    <textarea id="inputData" placeholder="Example: 5:AB;10:;..."></textarea>
+    <button onclick="renderImage()">Render Image</button>
+    
+    <canvas id="canvas" width="32" height="32"></canvas>
+</div>
+
+<script>
+    // Palette Definitions
+    const COLORS = [
+        [255, 255, 255], // 00: White
+        [0, 0, 0],       // 01: Black
+        [41, 167, 232],  // 10: Blue (#29A7E8)
+        [255, 247, 128]  // 11: Yellow (#FFF780)
+    ];
+
+    const BASE64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+    // Create a lookup map for Base64 decoding
+    const B64_MAP = {};
+    for (let i = 0; i < BASE64_CHARS.length; i++) {
+        B64_MAP[BASE64_CHARS[i]] = i;
+    }
+
+    function renderImage() {
+        const input = document.getElementById('inputData').value.trim();
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const imgData = ctx.createImageData(32, 32);
+        const data = imgData.data;
+
+        // Split input into rows (remove empty entries caused by trailing ;)
+        const rows = input.split(';').filter(r => r.length > 0);
+
+        if (rows.length !== 32) {
+            alert(`Error: Expected 32 rows, found ${rows.length}. Data might be corrupted.`);
+            return;
+        }
+
+        for (let y = 0; y < 32; y++) {
+            const rowStr = rows[y];
+            const parts = rowStr.split(':');
+            
+            if (parts.length < 2) continue; // Invalid row format
+
+            const L = parseInt(parts[0], 10);
+            const b64Data = parts[1];
+
+            let pixelIndex = 0;
+
+            // 1. Fill Prefix (L white pixels)
+            for (let i = 0; i < L; i++) {
+                setPixel(data, pixelIndex, y, 0); // 0 is White index
+                pixelIndex++;
+            }
+
+            // 2. Decode Base64 Data
+            for (let i = 0; i < b64Data.length; i++) {
+                const char = b64Data[i];
+                const val = B64_MAP[char];
+
+                // Extract 3 pixels (2 bits each) from the 6-bit value
+                // Bitmask: 00110000 (0x30) >> 4
+                // Bitmask: 00001100 (0x0C) >> 2
+                // Bitmask: 00000011 (0x03)
+                
+                const p1 = (val >> 4) & 0x03;
+                const p2 = (val >> 2) & 0x03;
+                const p3 = val & 0x03;
+
+                // Apply pixels if we are within bounds (32 width)
+                if (pixelIndex < 32) { setPixel(data, pixelIndex, y, p1); pixelIndex++; }
+                if (pixelIndex < 32) { setPixel(data, pixelIndex, y, p2); pixelIndex++; }
+                if (pixelIndex < 32) { setPixel(data, pixelIndex, y, p3); pixelIndex++; }
+            }
+
+            // 3. Fill Remainder with White (implicit from trimming)
+            while (pixelIndex < 32) {
+                setPixel(data, pixelIndex, y, 0);
+                pixelIndex++;
+            }
+        }
+
+        ctx.putImageData(imgData, 0, 0);
+    }
+
+    function setPixel(dataArr, x, y, colorIndex) {
+        const index = (y * 32 + x) * 4;
+        const [r, g, b] = COLORS[colorIndex];
+        
+        dataArr[index] = r;     // R
+        dataArr[index + 1] = g; // G
+        dataArr[index + 2] = b; // B
+        dataArr[index + 3] = 255; // Alpha
+    }
+</script>
+
+</body>
+</html>
