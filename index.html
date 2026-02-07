@@ -3,15 +3,36 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title></title>
+<title>Sir Jester</title>
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+    /* REMOVED: Google Font Import to save space and work offline */
+
+    /* Global Retro Style: Forces pixels to be sharp and blocky */
+    body, button, #timer, .hud-txt, #story-text, .btn {
+        /* MS Gothic (Windows) and Monaco (Mac) are very sharp/boxy by default */
+        font-family: "MS Gothic", "Fixedsys", "Monaco", "Courier New", monospace;
+        
+        /* The "Secret Sauce": Disables modern font smoothing for a pixel look */
+        font-smooth: never;
+        -webkit-font-smoothing: none;
+        -moz-osx-font-smoothing: grayscale;
+        image-rendering: pixelated;
+        
+        text-transform: uppercase;
+        font-weight: bold;
+    }
 
     body { 
         margin: 0; padding: 0; overflow: hidden; 
         background: #fff; 
-        font-family: 'Press Start 2P', cursive;
         touch-action: none; user-select: none; -webkit-user-select: none; 
+    }
+
+    /* Scanline Overlay: Adds retro texture with 0KB extra files */
+    body::after {
+        content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: repeating-linear-gradient(0deg, rgba(0,0,0,0.03) 0px, rgba(0,0,0,0.03) 1px, transparent 1px, transparent 2px);
+        pointer-events: none; z-index: 100;
     }
     
     canvas { display: block; width: 100%; height: 100%; }
@@ -35,18 +56,24 @@
     }
 
     #story-text {
-        font-size: 2.5vmin; line-height: 1.6; color: #000; margin-bottom: 2vmin;
+        font-size: 3vmin; line-height: 1.4; color: #000; margin-bottom: 2vmin;
         min-height: 5vmin; display: flex; align-items: center; justify-content: center;
     }
 
     /* BUTTONS */
     .btn {
         background: #000; color: #fff; border: 0.4vmin solid #000; 
-        padding: 1.5vmin 4vmin; font-family: inherit; font-size: 2.5vmin;
+        padding: 1.5vmin 4vmin; font-size: 2.5vmin;
         cursor: pointer; box-shadow: 0.5vmin 0.5vmin 0 #888;
         display: inline-block;
     }
     .btn:active { transform: translate(0.3vmin, 0.3vmin); box-shadow: 0.2vmin 0.2vmin 0 #888; }
+    
+    /* Timer & HUD Adjustments */
+    #timer { font-size: 4vmin; }
+    .hud-txt { font-size: 2.25vmin; }
+
+    /* Rest of your existing CSS (Borders, Animations, etc.) follows... */
 
     /* HUD OVERLAY */
     #game-hud {
